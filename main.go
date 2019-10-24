@@ -35,6 +35,7 @@ var (
 	currentDeviceType        string
 	debugMode                bool
 	substateReporting        bool
+	startupInterval          int
 
 	updatesPerformed  int
 	updatesLeftToFail int
@@ -69,6 +70,8 @@ func init() {
 	flag.BoolVar(&substateReporting, "substate", false, "send substate reporting")
 	flag.StringVar(&tenantToken, "tenant", "", "tenant key for account")
 
+	flag.IntVar(&startupInterval, "startup_interval", 0, "Define the size (seconds) of the uniform interval on which the clients will start")
+
 	mrand.Seed(time.Now().UnixNano())
 
 	updatesPerformed = 0
@@ -95,13 +98,16 @@ func main() {
 	files, _ := filepath.Glob("keys/**")
 	keysMissing := menderClientCount - len(files)
 
+	delta := time.Duration(startupInterval / menderClientCount)
 	if keysMissing <= 0 {
 		for i := 0; i < menderClientCount; i++ {
+			time.Sleep(delta * time.Second)
 			go clientScheduler(files[i])
 		}
 	} else {
 
 		for _, file := range files {
+			time.Sleep(delta * time.Second)
 			go clientScheduler(file)
 		}
 
@@ -114,6 +120,7 @@ func main() {
 				log.Fatal("failed to generate crypto keys!")
 			}
 
+			time.Sleep(delta * time.Second)
 			go clientScheduler("keys/" + filename)
 			keysMissing--
 		}
