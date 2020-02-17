@@ -29,7 +29,7 @@ test:format:
 build:
   image: docker
   services:
-    - docker:dind
+    - docker:19.03.5-dind
   stage: build
   script:
     - echo "building mender-stress-test-client for ${SERVICE_IMAGE}"
