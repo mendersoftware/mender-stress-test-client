@@ -11,6 +11,10 @@ stages:
   - build
   - publish
 
+include:
+  - project: 'Northern.tech/Mender/mendertesting'
+    file: '.gitlab-ci-check-commits-signoffs.yml'
+
 test:format:
   stage: test
   before_script:
@@ -25,7 +29,7 @@ test:format:
 build:
   image: docker
   services:
-    - docker:dind
+    - docker:19.03.5-dind
   stage: build
   script:
     - echo "building mender-stress-test-client for ${SERVICE_IMAGE}"
@@ -46,9 +50,12 @@ publish:build:
     - docker load -i image.tar
     - docker tag $SERVICE_IMAGE $DOCKER_REPOSITORY:$COMMIT_TAG
     - docker tag $SERVICE_IMAGE $DOCKER_REPOSITORY:$CI_COMMIT_REF_SLUG
+    # We don't have stable releases nor tags for this repo, so we tag :latest together with :master
+    - docker tag $SERVICE_IMAGE $DOCKER_REPOSITORY:latest
     - echo -n $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USERNAME --password-stdin
     - docker push $DOCKER_REPOSITORY:$COMMIT_TAG
     - docker push $SERVICE_IMAGE
+    - docker push $DOCKER_REPOSITORY:latest
   only:
     - master
   tags:
