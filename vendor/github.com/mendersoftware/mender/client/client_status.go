@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/mendersoftware/log"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -71,7 +71,7 @@ func (u *StatusClient) Report(api ApiRequester, url string, report StatusReport)
 
 	r, err := api.Do(req)
 	if err != nil {
-		log.Error("failed to report status: ", err)
+		log.Error("Failed to report status: ", err)
 		return errors.Wrapf(err, "reporting status failed")
 	}
 
@@ -80,14 +80,14 @@ func (u *StatusClient) Report(api ApiRequester, url string, report StatusReport)
 	// HTTP 204 No Content
 	switch {
 	case r.StatusCode == http.StatusConflict:
-		log.Warnf("status report rejected, deployment aborted at the backend")
+		log.Warnf("Status report rejected, deployment aborted at the backend")
 		return NewAPIError(ErrDeploymentAborted, r)
 	case r.StatusCode != http.StatusNoContent:
-		log.Errorf("got unexpected HTTP status when reporting status: %v", r.StatusCode)
+		log.Errorf("Got unexpected HTTP status when reporting status: %v", r.StatusCode)
 		return NewAPIError(errors.Errorf("reporting status failed, bad status %v", r.StatusCode), r)
 	}
 
-	log.Debugf("status reported, response %s", r.Status)
+	log.Debugf("Status reported, response %s", r.Status)
 
 	return nil
 }
@@ -99,7 +99,10 @@ func makeStatusReportRequest(server string, report StatusReport) (*http.Request,
 
 	out := &bytes.Buffer{}
 	enc := json.NewEncoder(out)
-	enc.Encode(&report)
+	err := enc.Encode(&report)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to encode status request data")
+	}
 
 	hreq, err := http.NewRequest(http.MethodPut, url, out)
 	if err != nil {
