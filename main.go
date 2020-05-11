@@ -249,7 +249,7 @@ func checkForNewUpdate(c *client.ApiClient, token client.AuthToken) {
 		stressTestClientServerIterator(),
 		func(string) (client.AuthToken, error) {
 			return token, nil
-		}), backendHost, client.CurrentUpdate{DeviceType: currentDeviceType, Artifact: currentArtifact})
+		}), backendHost, &client.CurrentUpdate{DeviceType: currentDeviceType, Artifact: currentArtifact})
 
 	if err != nil {
 		log.Info("failed when checking for new updates with: ", err.Error())
