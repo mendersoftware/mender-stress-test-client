@@ -14,6 +14,9 @@ github.com/mendersoftware/log
 github.com/mendersoftware/mender/client
 github.com/mendersoftware/mender/datastore
 github.com/mendersoftware/mender/store
+# github.com/mendersoftware/mendertesting v0.0.0-20200508051949-7d791ecb530c
+## explicit
+github.com/mendersoftware/mendertesting
 # github.com/mendersoftware/scopestack v0.0.0-20180403081436-c2f55994cadc
 ## explicit
 github.com/mendersoftware/scopestack
