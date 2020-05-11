@@ -1,4 +1,4 @@
-image: golang:1.11.4
+image: golang:1.14
 
 before_script:
   - export DOCKER_REPOSITORY="mendersoftware/mender-stress-test-client"
@@ -20,13 +20,23 @@ include:
 test:format:
   stage: test
   before_script:
+    # Rename the branch we're on, so that it's not in the way for the
+    # subsequent fetch. It's ok if this fails, it just means we're not on any
+    # branch.
+    - git branch -m temp-branch || true
+    # Git trick: Fetch directly into our local branches instead of remote
+    # branches.
+    - git fetch origin 'refs/heads/*:refs/heads/*'
+    # Get last remaining tags, if any.
+    - git fetch --tags origin
+
     - mkdir -p /go/src/github.com/mendersoftware
     - cp -r $CI_PROJECT_DIR /go/src/github.com/mendersoftware/mender-stress-test-client
     - cd /go/src/github.com/mendersoftware/mender-stress-test-client
   script:
-    - go fmt $(go list ./... | grep -v /vendor/)
-    - go vet $(go list ./... | grep -v /vendor/)
-    - go test -race $(go list ./... | grep -v /vendor/)
+    - go fmt $(go list ./...)
+    - go vet $(go list ./...)
+    - go test -race $(go list ./... )
 
 build:
   image: docker

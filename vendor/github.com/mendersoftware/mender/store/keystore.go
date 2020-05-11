@@ -1,4 +1,4 @@
-// Copyright 2017 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -24,8 +24,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/mendersoftware/log"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -69,17 +69,16 @@ func (k *Keystore) Load() error {
 	inf, err := k.store.OpenRead(k.keyName)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Debugf("private key does not exist")
+			log.Debugf("Private key does not exist")
 			return errNoKeys
-		} else {
-			return err
 		}
+		return err
 	}
 	defer inf.Close()
 
 	k.private, err = loadFromPem(inf)
 	if err != nil {
-		log.Errorf("failed to load key: %s", err)
+		log.Errorf("Failed to load key: %s", err)
 		return err
 	}
 
@@ -101,7 +100,7 @@ func (k *Keystore) Save() error {
 		// make sure to close the file
 		outf.Close()
 
-		log.Errorf("failed to save key: %s", err)
+		log.Errorf("Failed to save key: %s", err)
 		return err
 	}
 
@@ -174,7 +173,7 @@ func loadFromPem(in io.Reader) (*rsa.PrivateKey, error) {
 		return nil, errors.New("failed to decode block")
 	}
 
-	log.Debugf("block type: %s", block.Type)
+	log.Debugf("Block type: %s", block.Type)
 
 	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {

@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ type StateData struct {
 	Version int
 	// number representing the id of the last state to execute
 	Name MenderState
-	// update info and reponse data for the update that was in progress
+	// update info and response data for the update that was in progress
 	UpdateInfo UpdateInfo
 }
 
@@ -227,9 +227,18 @@ type Artifact struct {
 		URI    string
 		Expire string
 	}
+	// Compatible devices for dependency checking.
 	CompatibleDevices []string `json:"device_types_compatible"`
-	ArtifactName      string   `json:"artifact_name"`
-	PayloadTypes      []string
+	// What kind of payloads are embedded in the artifact
+	// (e.g. rootfs-image).
+	PayloadTypes []string
+	// The following two properties implements ArtifactProvides header-info
+	// field of artifact version >= 3. The Attributes are moved to the root
+	// of the Artifact structure for backwards compatibility.
+	ArtifactName  string `json:"artifact_name"`
+	ArtifactGroup string `json:"artifact_group"`
+	// Holds optional provides fields in the type-info header
+	TypeInfoProvides map[string]string `json:"artifact_provides,omitempty"`
 }
 
 // Info about the update in progress.
@@ -264,6 +273,14 @@ func (ur *UpdateInfo) CompatibleDevices() []string {
 
 func (ur *UpdateInfo) ArtifactName() string {
 	return ur.Artifact.ArtifactName
+}
+
+func (ur *UpdateInfo) ArtifactGroup() string {
+	return ur.Artifact.ArtifactGroup
+}
+
+func (ur *UpdateInfo) ArtifactTypeInfoProvides() map[string]string {
+	return ur.Artifact.TypeInfoProvides
 }
 
 func (ur *UpdateInfo) URI() string {

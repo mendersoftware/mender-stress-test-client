@@ -42,28 +42,14 @@ type Txn struct {
 	// and its cursors will point directly into the memory-mapped structure.
 	// Such slices will be readonly and must only be referenced wthin the
 	// transaction's lifetime.
-	RawRead bool
-
-	// Pooled may be set to true while a Txn is stored in a sync.Pool, after
-	// Txn.Reset reset has been called and before Txn.Renew.  This will keep
-	// the Txn finalizer from unnecessarily warning the application about
-	// finalizations.
-	Pooled bool
-
+	RawRead  bool
 	managed  bool
 	readonly bool
-
-	// The value of Txn.ID() is cached so that the cost of cgo does not have to
-	// be paid.  The id of a Txn cannot change over its life, even if it is
-	// reset/renewed
-	id uintptr
-
-	env  *Env
-	_txn *C.MDB_txn
-	key  *C.MDB_val
-	val  *C.MDB_val
-
-	errLogf func(format string, v ...interface{})
+	env      *Env
+	_txn     *C.MDB_txn
+	errLogf  func(format string, v ...interface{})
+	key      *C.MDB_val
+	val      *C.MDB_val
 }
 
 // beginTxn does not lock the OS thread which is a prerequisite for creating a
@@ -76,22 +62,10 @@ func beginTxn(env *Env, parent *Txn, flags uint) (*Txn, error) {
 
 	var ptxn *C.MDB_txn
 	if parent == nil {
-		if flags&Readonly == 0 {
-			// In a write Txn we can use the shared, C-allocated key and value
-			// allocated by env, and freed when it is closed.
-			txn.key = env.ckey
-			txn.val = env.cval
-		} else {
-			// It is not easy to share C.MDB_val values in this scenario unless
-			// there is a synchronized pool involved, which will increase
-			// overhead.  Further, allocating these values with C will add
-			// overhead both here and when the values are freed.
-			txn.key = new(C.MDB_val)
-			txn.val = new(C.MDB_val)
-		}
+		ptxn = nil
+		txn.key = new(C.MDB_val)
+		txn.val = new(C.MDB_val)
 	} else {
-		// Because parent Txn objects cannot be used while a sub-Txn is active
-		// it is OK for them to share their C.MDB_val objects.
 		ptxn = parent._txn
 		txn.key = parent.key
 		txn.val = parent.val
@@ -109,71 +83,7 @@ func beginTxn(env *Env, parent *Txn, flags uint) (*Txn, error) {
 //
 // See mdb_txn_id.
 func (txn *Txn) ID() uintptr {
-	// It is possible for a txn to legitimately have ID 0 if it a readonly txn
-	// created before any updates.  In practice this does not really happen
-	// because an application typically must do an initial update to initialize
-	// application dbis.  Even so, calling C.mdb_txn_id excessively isn't
-	// actually harmful, it is just slow.
-	if txn.id == 0 {
-		txn.id = txn.getID()
-	}
-
-	return txn.id
-}
-
-func (txn *Txn) getID() uintptr {
 	return uintptr(C.mdb_txn_id(txn._txn))
-}
-
-// RunOp executes fn with txn as an argument.  During the execution of fn no
-// goroutine may call the Commit, Abort, Reset, and Renew methods on txn.
-// RunOp returns the result of fn without any further action.  RunOp will not
-// abort txn if fn returns an error, unless terminate is true.  If terminate is
-// true then RunOp will attempt to commit txn if fn is successful, otherwise
-// RunOp will abort txn before returning any failure encountered.
-//
-// RunOp primarily exists to allow applications and other packages to provide
-// variants of the managed transactions provided by lmdb (i.e. View, Update,
-// etc).  For example, the lmdbpool package uses RunOp to provide an
-// Txn-friendly sync.Pool and a function analogous to Env.View that uses
-// transactions from that pool.
-func (txn *Txn) RunOp(fn TxnOp, terminate bool) error {
-	if terminate {
-		return txn.runOpTerm(fn)
-	}
-	return txn.runOp(fn)
-}
-
-func (txn *Txn) runOpTerm(fn TxnOp) error {
-	if txn.managed {
-		panic("managed transaction cannot be terminated directly")
-	}
-	defer txn.abort()
-
-	// There is no need to restore txn.managed after fn has executed because
-	// the Txn will terminate one way or another using methods which don't
-	// check txn.managed.
-	txn.managed = true
-
-	err := fn(txn)
-	if err != nil {
-		return err
-	}
-
-	return txn.commit()
-}
-
-func (txn *Txn) runOp(fn TxnOp) error {
-	if !txn.managed {
-		// Restoring txn.managed must be done in a deferred call otherwise the
-		// caller may not be able to abort the transaction if a runtime panic
-		// occurs (attempting to do so would cause another panic).
-		txn.managed = true
-		defer func() {
-			txn.managed = false
-		}()
-	}
-	return fn(txn)
 }
 
 // Commit persists all transaction operations to the database and clears the
@@ -182,16 +92,15 @@ func (txn *Txn) runOp(fn TxnOp) error {
 // See mdb_txn_commit.
 func (txn *Txn) Commit() error {
 	if txn.managed {
-		panic("managed transaction cannot be committed directly")
+		panic("managed transaction cannot be comitted directly")
 	}
-
 	runtime.SetFinalizer(txn, nil)
 	return txn.commit()
 }
 
 func (txn *Txn) commit() error {
 	ret := C.mdb_txn_commit(txn._txn)
-	txn.clearTxn()
+	txn._txn = nil
 	return operrno("mdb_txn_commit", ret)
 }
 
@@ -203,7 +112,6 @@ func (txn *Txn) Abort() {
 	if txn.managed {
 		panic("managed transaction cannot be aborted directly")
 	}
-
 	runtime.SetFinalizer(txn, nil)
 	txn.abort()
 }
@@ -212,36 +120,9 @@ func (txn *Txn) abort() {
 	if txn._txn == nil {
 		return
 	}
-
-	// Get a read-lock on the environment so we can abort txn if needed.
-	// txn.env **should** terminate all readers otherwise when it closes.
-	txn.env.closeLock.RLock()
-	if txn.env._env != nil {
-		C.mdb_txn_abort(txn._txn)
-	}
-	txn.env.closeLock.RUnlock()
-
-	txn.clearTxn()
-}
-
-func (txn *Txn) clearTxn() {
-	// Clear the C object to prevent any potential future use of the freed
-	// pointer.
+	C.mdb_txn_abort(txn._txn)
+	// The transaction handle is always freed.
 	txn._txn = nil
-
-	// Clear txn.id because it no longer matches the value of txn._txn (and
-	// future calls to txn.ID() should not see the stale id).  Instead of
-	// returning the old ID future calls to txn.ID() will query LMDB to make
-	// sure the value returned for an invalid Txn is more or less consistent
-	// for people familiar with the C semantics.
-	txn.resetID()
-}
-
-// resetID has to be called anytime the value of Txn.getID() may change
-// otherwise the cached value may diverge from the actual value and the
-// abstraction has failed.
-func (txn *Txn) resetID() {
-	txn.id = 0
 }
 
 // Reset aborts the transaction clears internal state so the transaction may be
@@ -254,8 +135,8 @@ func (txn *Txn) Reset() {
 	if txn.managed {
 		panic("managed transaction cannot be reset directly")
 	}
-
 	txn.reset()
+	runtime.SetFinalizer(txn, nil)
 }
 
 func (txn *Txn) reset() {
@@ -270,22 +151,16 @@ func (txn *Txn) Renew() error {
 	if txn.managed {
 		panic("managed transaction cannot be renewed directly")
 	}
-
-	return txn.renew()
+	err := txn.renew()
+	if err != nil {
+		return err
+	}
+	runtime.SetFinalizer(txn, func(v interface{}) { v.(*Txn).finalize() })
+	return nil
 }
 
 func (txn *Txn) renew() error {
 	ret := C.mdb_txn_renew(txn._txn)
-
-	// mdb_txn_renew causes txn._txn to pick up a new transaction ID.  It's
-	// slightly confusing in the LMDB docs.  Txn ID corresponds to database
-	// snapshot the reader is holding, which is good because renewed
-	// transactions can see updates which happened since they were created (or
-	// since they were last renewed).  It should follow that renewing a Txn
-	// results in the freeing of stale pages the Txn has been holding, though
-	// this has not been confirmed in any way by bmatsuo as of 2017-02-15.
-	txn.resetID()
-
 	return operrno("mdb_txn_renew", ret)
 }
 
@@ -513,11 +388,8 @@ func (txn *Txn) errf(format string, v ...interface{}) {
 
 func (txn *Txn) finalize() {
 	if txn._txn != nil {
-		if !txn.Pooled {
-			txn.errf("lmdb: aborting unreachable transaction %#x", uintptr(unsafe.Pointer(txn)))
-		}
-
-		txn.abort()
+		txn.errf("lmdb: aborting unreachable transaction %#x", uintptr(unsafe.Pointer(txn)))
+		txn.Abort()
 	}
 }
 
