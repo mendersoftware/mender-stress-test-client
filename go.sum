@@ -9,6 +9,8 @@ github.com/mendersoftware/log v0.0.0-20200417111528-65591dc94164 h1:e5z24fZe36ve
 github.com/mendersoftware/log v0.0.0-20200417111528-65591dc94164/go.mod h1:lFeDBHH7ZPO7UKS3U08YjR++osjKrBJIG37Cjn9iHps=
 github.com/mendersoftware/mender v0.0.0-20200421064642-412268f68d10 h1:/taARfvtBP+ufjeDP1ZWGV7jGDHJ0IqhJVK54J4k7sU=
 github.com/mendersoftware/mender v0.0.0-20200421064642-412268f68d10/go.mod h1:T/ArKU7JLobIqe7fKBmhGXNnS7NYaXC9MrY9UAZQHU4=
+github.com/mendersoftware/mendertesting v0.0.0-20200508051949-7d791ecb530c h1:sLa+BrBNNoZJk6U57nIoeZ8pA3DNTUQHBKhPtdwpNg4=
+github.com/mendersoftware/mendertesting v0.0.0-20200508051949-7d791ecb530c/go.mod h1:WZyiX1zeljfyFaTjmbR84+wHjzmPDLDvOdRHZnnLM/0=
 github.com/mendersoftware/scopestack v0.0.0-20180403081436-c2f55994cadc h1:/7Lc6pi7arMUxLIZLNlR8MTz9ahvYQYD4CaYfS/5glM=
 github.com/mendersoftware/scopestack v0.0.0-20180403081436-c2f55994cadc/go.mod h1:wgnq1c22Fs62D/Ads3yiWnSpDt2OkzQjA4q20dJpgDM=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
