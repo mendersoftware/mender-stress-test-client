@@ -14,7 +14,7 @@ github.com/mendersoftware/log
 github.com/mendersoftware/mender/client
 github.com/mendersoftware/mender/datastore
 github.com/mendersoftware/mender/store
-# github.com/mendersoftware/mendertesting v0.0.0-20200508051949-7d791ecb530c
+# github.com/mendersoftware/mendertesting v0.0.1
 ## explicit
 github.com/mendersoftware/mendertesting
 # github.com/mendersoftware/scopestack v0.0.0-20180403081436-c2f55994cadc
@@ -29,13 +29,13 @@ github.com/pmezard/go-difflib/difflib
 ## explicit
 github.com/sirupsen/logrus
 github.com/sirupsen/logrus/hooks/syslog
-# github.com/stretchr/objx v0.1.0
+# github.com/stretchr/objx v0.3.0
+## explicit
 github.com/stretchr/objx
 # github.com/stretchr/testify v1.5.1
-## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/mock
-# golang.org/x/net v0.0.0-20200506145744-7e3656a0809f
+# golang.org/x/net v0.0.0-20200904194848-62affa334b73
 ## explicit
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
