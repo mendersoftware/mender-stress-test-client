@@ -1,6 +1,6 @@
 module github.com/mendersoftware/mender-stress-test-client
 
-go 1.14
+go 1.15
 
 require (
 	github.com/bmatsuo/lmdb-go v1.8.0 // indirect

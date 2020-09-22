@@ -1,4 +1,4 @@
-image: golang:1.14
+image: golang:1.15
 
 before_script:
   - export DOCKER_REPOSITORY="mendersoftware/mender-stress-test-client"
