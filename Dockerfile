@@ -1,4 +1,4 @@
-FROM golang:1.15.3-alpine3.12 as builder
+FROM golang:1.15.4-alpine3.12 as builder
 RUN apk add --no-cache gcc musl-dev
 RUN mkdir -p /go/src/github.com/mendersoftware/mender-stress-test-client
 WORKDIR /go/src/github.com/mendersoftware/mender-stress-test-client
