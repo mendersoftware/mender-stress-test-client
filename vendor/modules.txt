@@ -16,7 +16,6 @@ github.com/mendersoftware/mender/datastore
 github.com/mendersoftware/mender/store
 # github.com/mendersoftware/mendertesting v0.0.1
 ## explicit
-github.com/mendersoftware/mendertesting
 # github.com/mendersoftware/scopestack v0.0.0-20180403081436-c2f55994cadc
 ## explicit
 github.com/mendersoftware/scopestack
