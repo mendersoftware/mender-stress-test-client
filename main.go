@@ -25,6 +25,7 @@ import (
 	mrand "math/rand"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -48,6 +49,7 @@ var (
 	currentArtifact          string
 	currentDeviceType        string
 	debugMode                bool
+	singleKeyMode            bool
 	substateReporting        bool
 	startupInterval          int
 
@@ -58,6 +60,11 @@ var (
 
 	lock sync.Mutex
 )
+
+type FakeMenderClient struct {
+	mac string
+	key string
+}
 
 type FakeMenderAuthManager struct {
 	idSrc       []byte
@@ -72,14 +79,15 @@ func init() {
 	flag.IntVar(&inventoryUpdateFrequency, "invfreq", 600, "amount of time to wait between inventory updates")
 	flag.StringVar(&backendHost, "backend", "https://localhost", "entire URI to the backend")
 	flag.StringVar(&inventoryItems, "inventory", "device_type:test,image_id:test,client_version:test", "inventory key:value pairs distinguished with ','")
-	flag.StringVar(&updateFailMsg, "fail", strings.Repeat("failed, damn!", 3), "fail update with specified message")
+	flag.StringVar(&updateFailMsg, "fail", strings.TrimSpace(strings.Repeat("failed, damn! ", 3)), "fail update with specified message")
 	flag.IntVar(&updateFailCount, "failcount", 1, "amount of clients that will fail an update")
 
 	flag.StringVar(&currentArtifact, "current_artifact", "test", "current installed artifact")
 	flag.StringVar(&currentDeviceType, "current_device", "test", "current device type")
 
 	flag.IntVar(&pollFrequency, "pollfreq", 600, "how often to poll the backend")
-	flag.BoolVar(&debugMode, "debug", true, "debug output")
+	flag.BoolVar(&debugMode, "debug", false, "debug output")
+	flag.BoolVar(&singleKeyMode, "single_key", false, "single key mode: generates a single key and uses sequential mac addresses")
 
 	flag.BoolVar(&substateReporting, "substate", false, "send substate reporting")
 	flag.StringVar(&tenantToken, "tenant", "", "tenant key for account")
@@ -87,8 +95,6 @@ func init() {
 	flag.IntVar(&startupInterval, "startup_interval", 0, "Define the size (seconds) of the uniform interval on which the clients will start")
 
 	mrand.Seed(time.Now().UnixNano())
-
-	updatesPerformed = 0
 }
 
 func main() {
@@ -106,69 +112,88 @@ func main() {
 	updatesLeftToFail = updateFailCount
 
 	if _, err := os.Stat("keys/"); os.IsNotExist(err) {
-		os.Mkdir("keys", 0700)
+		err = os.Mkdir("keys", 0700)
+		if err != nil {
+			panic(err)
+		}
 	}
 
+	clients := make([]*FakeMenderClient, menderClientCount)
+
 	files, _ := filepath.Glob("keys/**")
+	for i, filename := range files {
+		clients[i] = &FakeMenderClient{
+			mac: path.Base(filename),
+			key: filename,
+		}
+	}
+
 	keysMissing := menderClientCount - len(files)
-
-	delta := time.Duration(startupInterval / menderClientCount)
-	if keysMissing <= 0 {
-		for i := 0; i < menderClientCount; i++ {
-			time.Sleep(delta * time.Second)
-			go clientScheduler(files[i])
-		}
-	} else {
-
-		for _, file := range files {
-			time.Sleep(delta * time.Second)
-			go clientScheduler(file)
-		}
-
-		fmt.Printf("%d keys need to be generated..\n", keysMissing)
-
+	if keysMissing > 0 {
+		fmt.Printf("%d keys need to be generated...\n", keysMissing)
 		for keysMissing > 0 {
-			filename, err := generateClientKeys()
-
+			index := menderClientCount - keysMissing
+			mac, filename, err := generateClientKeys(index)
 			if err != nil {
 				log.Fatal("failed to generate crypto keys!")
 			}
-
-			time.Sleep(delta * time.Second)
-			go clientScheduler("keys/" + filename)
+			clients[index] = &FakeMenderClient{
+				mac: mac,
+				key: filename,
+			}
 			keysMissing--
 		}
-
 	}
 
-	files, _ = filepath.Glob("keys/**")
+	delta := time.Duration(startupInterval / menderClientCount)
+	for i := 0; i < menderClientCount; i++ {
+		time.Sleep(delta * time.Second)
+		go clientScheduler(clients[i])
+	}
 
 	// block forever
 	select {}
 }
 
-func generateClientKeys() (string, error) {
+func generateClientKeys(index int) (string, string, error) {
 	buf := make([]byte, 6)
-	rand.Read(buf)
+	if singleKeyMode {
+		buf[0] = 255
+		buf[1] = byte(int64(index>>32) & 255)
+		buf[2] = byte(int64(index>>24) & 255)
+		buf[3] = byte(int64(index>>16) & 255)
+		buf[4] = byte(int64(index>>8) & 255)
+		buf[5] = byte(int64(index) & 255)
+	} else {
+		if _, err := rand.Read(buf); err != nil {
+			panic(err)
+		}
+	}
 
 	fakeMACaddress := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5])
 	log.Debug("created device with fake mac address: ", fakeMACaddress)
 
-	ms := store.NewDirStore("keys/")
-	kstore := store.NewKeystore(ms, fakeMACaddress, "", false, "")
+	if singleKeyMode && index == 0 || !singleKeyMode {
+		ms := store.NewDirStore("keys/")
+		kstore := store.NewKeystore(ms, fakeMACaddress, "", false, "")
 
-	if err := kstore.Generate(); err != nil {
-		return "", err
+		if err := kstore.Generate(); err != nil {
+			return "", "", err
+		}
+
+		if err := kstore.Save(); err != nil {
+			return "", "", err
+		}
+	} else {
+		if err := os.Link("keys/ff:00:00:00:00:00", "keys/"+fakeMACaddress); err != nil {
+			panic(err)
+		}
 	}
 
-	if err := kstore.Save(); err != nil {
-		return "", err
-	}
-
-	return fakeMACaddress, nil
+	return fakeMACaddress, "keys/" + fakeMACaddress, nil
 }
 
-func clientScheduler(storeFile string) {
+func clientScheduler(menderClient *FakeMenderClient) {
 	clientUpdateTicker := time.NewTicker(time.Second * time.Duration(pollFrequency))
 	clientInventoryTicker := time.NewTicker(time.Second * time.Duration(inventoryUpdateFrequency))
 
@@ -181,6 +206,7 @@ func clientScheduler(storeFile string) {
 		log.Fatal(err)
 	}
 
+	storeFile := menderClient.key
 	token := clientAuthenticate(api, storeFile)
 
 	for {
@@ -202,7 +228,9 @@ func clientAuthenticate(c *client.ApiClient, storeFile string) client.AuthToken 
 
 	ms := store.NewDirStore(filepath.Dir(storeFile))
 	kstore := store.NewKeystore(ms, macAddress, "", false, "")
-	kstore.Load()
+	if err := kstore.Load(); err != nil {
+		panic(err)
+	}
 
 	authReq := client.NewAuth()
 
@@ -213,7 +241,9 @@ func clientAuthenticate(c *client.ApiClient, storeFile string) client.AuthToken 
 		tenantToken: tenantToken,
 	}
 
-	kstore.Save()
+	if err := kstore.Save(); err != nil {
+		panic(err)
+	}
 
 	for {
 		if authTokenResp, err := authReq.Request(c, backendHost, mgr); err == nil && len(authTokenResp) > 0 {
