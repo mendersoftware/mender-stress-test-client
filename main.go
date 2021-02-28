@@ -73,26 +73,55 @@ type FakeMenderAuthManager struct {
 	keyStore    *store.Keystore
 }
 
+const (
+	defaultMenderClientCount        = 100
+	defaultMaxWaitSteps             = 1800
+	defaultInventoryUpdateFrequency = 600
+	defaultBackendHost              = "https://localhost"
+	defaultInventoryItems           = "device_type:test,image_id:test,client_version:test"
+	defaultUpdateFailMsg            = "failed, damn! failed, damn! failed, damn!"
+	defaultUpdateFailCount          = 1
+	defaultCurrentArtifact          = "test"
+	defaultCurrentDeviceType        = "test"
+	defaultPollFrequency            = 600
+	defaultTenantToken              = ""
+)
+
 func init() {
-	flag.IntVar(&menderClientCount, "count", 100, "amount of fake mender clients to spawn")
-	flag.IntVar(&maxWaitSteps, "wait", 1800, "max. amount of time to wait between update steps: download image, install, reboot, success/failure")
-	flag.IntVar(&inventoryUpdateFrequency, "invfreq", 600, "amount of time to wait between inventory updates")
-	flag.StringVar(&backendHost, "backend", "https://localhost", "entire URI to the backend")
-	flag.StringVar(&inventoryItems, "inventory", "device_type:test,image_id:test,client_version:test", "inventory key:value pairs distinguished with ','")
-	flag.StringVar(&updateFailMsg, "fail", strings.TrimSpace(strings.Repeat("failed, damn! ", 3)), "fail update with specified message")
-	flag.IntVar(&updateFailCount, "failcount", 1, "amount of clients that will fail an update")
+	flag.IntVar(&menderClientCount, "count", defaultMenderClientCount,
+		"amount of fake mender clients to spawn")
+	flag.IntVar(&maxWaitSteps, "wait", defaultMaxWaitSteps,
+		"max. amount of time to wait between update steps: download image, install, reboot, success/failure")
+	flag.IntVar(&inventoryUpdateFrequency, "invfreq", defaultInventoryUpdateFrequency,
+		"amount of time to wait between inventory updates")
+	flag.StringVar(&backendHost, "backend", defaultBackendHost,
+		"entire URI to the backend")
+	flag.StringVar(&inventoryItems, "inventory", defaultInventoryItems,
+		"inventory key:value pairs distinguished with ','")
+	flag.StringVar(&updateFailMsg, "fail", defaultUpdateFailMsg,
+		"fail update with specified message")
+	flag.IntVar(&updateFailCount, "failcount", defaultUpdateFailCount,
+		"amount of clients that will fail an update")
 
-	flag.StringVar(&currentArtifact, "current_artifact", "test", "current installed artifact")
-	flag.StringVar(&currentDeviceType, "current_device", "test", "current device type")
+	flag.StringVar(&currentArtifact, "current_artifact", defaultCurrentArtifact,
+		"current installed artifact")
+	flag.StringVar(&currentDeviceType, "current_device", defaultCurrentDeviceType,
+		"current device type")
 
-	flag.IntVar(&pollFrequency, "pollfreq", 600, "how often to poll the backend")
-	flag.BoolVar(&debugMode, "debug", false, "debug output")
-	flag.BoolVar(&singleKeyMode, "single_key", false, "single key mode: generates a single key and uses sequential mac addresses")
+	flag.IntVar(&pollFrequency, "pollfreq", defaultPollFrequency,
+		"how often to poll the backend")
+	flag.BoolVar(&debugMode, "debug", false,
+		"debug output")
+	flag.BoolVar(&singleKeyMode, "single_key", false,
+		"single key mode: generates a single key and uses sequential mac addresses")
 
-	flag.BoolVar(&substateReporting, "substate", false, "send substate reporting")
-	flag.StringVar(&tenantToken, "tenant", "", "tenant key for account")
+	flag.BoolVar(&substateReporting, "substate", false,
+		"send substate reporting")
+	flag.StringVar(&tenantToken, "tenant", defaultTenantToken,
+		"tenant key for account")
 
-	flag.IntVar(&startupInterval, "startup_interval", 0, "Define the size (seconds) of the uniform interval on which the clients will start")
+	flag.IntVar(&startupInterval, "startup_interval", 0,
+		"Define the size (seconds) of the uniform interval on which the clients will start")
 
 	mrand.Seed(time.Now().UnixNano())
 }
