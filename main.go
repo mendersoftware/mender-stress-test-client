@@ -43,6 +43,7 @@ var (
 	inventoryUpdateFrequency int
 	pollFrequency            int
 	backendHost              string
+	serverCertificate        string
 	inventoryItems           string
 	updateFailMsg            string
 	updateFailCount          int
@@ -62,8 +63,9 @@ var (
 )
 
 type FakeMenderClient struct {
-	mac string
-	key string
+	index int
+	mac   string
+	key   string
 }
 
 type FakeMenderAuthManager struct {
@@ -78,7 +80,7 @@ const (
 	defaultMaxWaitSteps             = 1800
 	defaultInventoryUpdateFrequency = 600
 	defaultBackendHost              = "https://localhost"
-	defaultInventoryItems           = "device_type:test,image_id:test,client_version:test"
+	defaultInventoryItems           = "device_type:test,image_id:test,client_version:test,device_group:group1|group2"
 	defaultUpdateFailMsg            = "failed, damn! failed, damn! failed, damn!"
 	defaultUpdateFailCount          = 1
 	defaultCurrentArtifact          = "test"
@@ -96,8 +98,10 @@ func init() {
 		"amount of time to wait between inventory updates")
 	flag.StringVar(&backendHost, "backend", defaultBackendHost,
 		"entire URI to the backend")
+	flag.StringVar(&serverCertificate, "server_certificate", "",
+		"HTTPS server certificate")
 	flag.StringVar(&inventoryItems, "inventory", defaultInventoryItems,
-		"inventory key:value pairs distinguished with ','")
+		"inventory key:value pairs distinguished with ','; multiple values, separated by pipes, are evenly distributed across the devices")
 	flag.StringVar(&updateFailMsg, "fail", defaultUpdateFailMsg,
 		"fail update with specified message")
 	flag.IntVar(&updateFailCount, "failcount", defaultUpdateFailCount,
@@ -152,8 +156,9 @@ func main() {
 	files, _ := filepath.Glob("keys/**")
 	for i, filename := range files {
 		clients[i] = &FakeMenderClient{
-			mac: path.Base(filename),
-			key: filename,
+			index: i,
+			mac:   path.Base(filename),
+			key:   filename,
 		}
 	}
 
@@ -167,8 +172,9 @@ func main() {
 				log.Fatal("failed to generate crypto keys!")
 			}
 			clients[index] = &FakeMenderClient{
-				mac: mac,
-				key: filename,
+				index: index,
+				mac:   mac,
+				key:   filename,
 			}
 			keysMissing--
 		}
@@ -227,8 +233,9 @@ func clientScheduler(menderClient *FakeMenderClient) {
 	clientInventoryTicker := time.NewTicker(time.Second * time.Duration(inventoryUpdateFrequency))
 
 	api, err := client.New(client.Config{
-		IsHttps:  true,
-		NoVerify: true,
+		IsHttps:    true,
+		NoVerify:   true,
+		ServerCert: serverCertificate,
 	})
 
 	if err != nil {
@@ -241,7 +248,7 @@ func clientScheduler(menderClient *FakeMenderClient) {
 	for {
 		select {
 		case <-clientInventoryTicker.C:
-			invItems := parseInventoryItems()
+			invItems := parseInventoryItems(menderClient.index)
 			sendInventoryUpdate(api, token, &invItems)
 
 		case <-clientUpdateTicker.C:
@@ -416,13 +423,17 @@ func downloadToDevNull(url string) error {
 	return nil
 }
 
-func parseInventoryItems() []client.InventoryAttribute {
+func parseInventoryItems(index int) []client.InventoryAttribute {
 	var invAttrs []client.InventoryAttribute
 	for _, e := range strings.Split(inventoryItems, ",") {
-		pair := strings.Split(e, ":")
-		if pair != nil {
+		pair := strings.SplitN(e, ":", 2)
+		if len(pair) == 2 {
 			key := pair[0]
 			value := pair[1]
+			if strings.Contains(value, "|") {
+				values := strings.Split(value, "|")
+				value = values[index%len(values)]
+			}
 			i := client.InventoryAttribute{Name: key, Value: value}
 			invAttrs = append(invAttrs, i)
 		}
