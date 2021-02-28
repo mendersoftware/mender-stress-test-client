@@ -87,6 +87,7 @@ const (
 	defaultCurrentDeviceType        = "test"
 	defaultPollFrequency            = 600
 	defaultTenantToken              = ""
+	defaultStartupInterval          = 0
 )
 
 func init() {
@@ -124,7 +125,7 @@ func init() {
 	flag.StringVar(&tenantToken, "tenant", defaultTenantToken,
 		"tenant key for account")
 
-	flag.IntVar(&startupInterval, "startup_interval", 0,
+	flag.IntVar(&startupInterval, "startup_interval", defaultStartupInterval,
 		"Define the size (seconds) of the uniform interval on which the clients will start")
 
 	mrand.Seed(time.Now().UnixNano())
@@ -245,11 +246,20 @@ func clientScheduler(menderClient *FakeMenderClient) {
 	storeFile := menderClient.key
 	token := clientAuthenticate(api, storeFile)
 
+	var sendInventory = func() {
+		invItems := parseInventoryItems(menderClient.index)
+		sendInventoryUpdate(api, token, &invItems)
+	}
+
+	// send for inventory and check for updates immediately after authorization
+	sendInventory()
+	checkForNewUpdate(api, token)
+
+	// schedule inventory and check for updates according to the poll/inventory settings
 	for {
 		select {
 		case <-clientInventoryTicker.C:
-			invItems := parseInventoryItems(menderClient.index)
-			sendInventoryUpdate(api, token, &invItems)
+			sendInventory()
 
 		case <-clientUpdateTicker.C:
 			checkForNewUpdate(api, token)
