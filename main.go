@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -155,7 +155,7 @@ func generateClientKeys() (string, error) {
 	log.Debug("created device with fake mac address: ", fakeMACaddress)
 
 	ms := store.NewDirStore("keys/")
-	kstore := store.NewKeystore(ms, fakeMACaddress)
+	kstore := store.NewKeystore(ms, fakeMACaddress, "", false, "")
 
 	if err := kstore.Generate(); err != nil {
 		return "", err
@@ -201,7 +201,7 @@ func clientAuthenticate(c *client.ApiClient, storeFile string) client.AuthToken 
 	encdata, _ := json.Marshal(identityData)
 
 	ms := store.NewDirStore(filepath.Dir(storeFile))
-	kstore := store.NewKeystore(ms, macAddress)
+	kstore := store.NewKeystore(ms, macAddress, "", false, "")
 	kstore.Load()
 
 	authReq := client.NewAuth()

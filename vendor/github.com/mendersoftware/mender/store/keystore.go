@@ -14,16 +14,12 @@
 package store
 
 import (
-	"bytes"
-	"crypto"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 
+	"github.com/mendersoftware/openssl"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -33,39 +29,58 @@ const (
 )
 
 var (
-	errNoKeys = errors.New("no keys")
+	errNoKeys    = errors.New("no keys")
+	errNoEngines = errors.New("no engines loaded")
+	errStaticKey = errors.New("cannot replace static key")
 )
 
 type Keystore struct {
-	store   Store
-	private *rsa.PrivateKey
-	keyName string
+	store         Store
+	private       openssl.PrivateKey
+	keyName       string
+	keyPassphrase string
+	sslEngine     string
+	staticKey     bool
 }
 
 func (k *Keystore) GetStore() Store {
 	return k.store
 }
 
-func (k *Keystore) GetPrivateKey() *rsa.PrivateKey {
-	return k.private
-}
-
 func (k *Keystore) GetKeyName() string {
 	return k.keyName
 }
 
-func NewKeystore(store Store, name string) *Keystore {
+func NewKeystore(store Store, name string, sslEngine string, static bool, passphrase string) *Keystore {
 	if store == nil {
 		return nil
 	}
 
 	return &Keystore{
-		store:   store,
-		keyName: name,
+		store:         store,
+		keyName:       name,
+		sslEngine:     sslEngine,
+		staticKey:     static,
+		keyPassphrase: passphrase,
 	}
 }
 
 func (k *Keystore) Load() error {
+	if strings.HasPrefix(k.keyName, "pkcs11:") {
+		engine, err := openssl.EngineById(k.sslEngine)
+		if err != nil {
+			log.Errorf("Failed to Load '%s' engine. Err %s",
+				k.sslEngine, err.Error())
+			return errNoEngines
+		}
+
+		k.private, err = openssl.EngineLoadPrivateKey(engine, k.keyName)
+		if err != nil {
+			log.Errorf("Failed to Load private key from engine '%s'. Err %s",
+				k.sslEngine, err.Error())
+			return errNoKeys
+		}
+	}
 	inf, err := k.store.OpenRead(k.keyName)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -76,7 +91,13 @@ func (k *Keystore) Load() error {
 	}
 	defer inf.Close()
 
-	k.private, err = loadFromPem(inf)
+	passphrase, err := loadPassphrase(k.keyPassphrase)
+	if err != nil {
+		log.Errorf("Failed to load passphrase-file parameter: %s", err)
+		return err
+	}
+
+	k.private, err = loadFromPem(inf, passphrase)
 	if err != nil {
 		log.Errorf("Failed to load key: %s", err)
 		return err
@@ -94,23 +115,24 @@ func (k *Keystore) Save() error {
 	if err != nil {
 		return err
 	}
+	defer outf.Close()
 
 	err = saveToPem(outf, k.private)
 	if err != nil {
 		// make sure to close the file
-		outf.Close()
-
-		log.Errorf("Failed to save key: %s", err)
 		return err
 	}
-
-	outf.Close()
 
 	return outf.Commit()
 }
 
 func (k *Keystore) Generate() error {
-	key, err := rsa.GenerateKey(rand.Reader, RsaKeyLength)
+	if k.staticKey {
+		// Don't re-generate key if it's static.
+		return errStaticKey
+	}
+
+	key, err := openssl.GenerateRSAKey(RsaKeyLength)
 	if err != nil {
 		return err
 	}
@@ -120,62 +142,57 @@ func (k *Keystore) Generate() error {
 	return nil
 }
 
-func (k *Keystore) Private() *rsa.PrivateKey {
+func (k *Keystore) Private() openssl.PrivateKey {
 	return k.private
 }
 
-func (k *Keystore) Public() crypto.PublicKey {
+func (k *Keystore) Public() openssl.PublicKey {
 	if k.private != nil {
-		return k.private.Public()
+		return k.private
 	}
 	return nil
 }
 
 func (k *Keystore) PublicPEM() (string, error) {
-	data, err := x509.MarshalPKIXPublicKey(k.Public())
+	if k.private == nil {
+		return "", errors.Errorf("private key is empty; ks '%v'", k)
+	}
+
+	data, err := k.private.MarshalPKIXPublicKeyPEM()
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to marshal public key")
 	}
 
-	buf := &bytes.Buffer{}
-	err = pem.Encode(buf, &pem.Block{
-		Type:  "PUBLIC KEY", // PKCS1
-		Bytes: data,
-	})
-	if err != nil {
-		return "", errors.Wrapf(err, "failed to encode public key to PEM")
-	}
-
-	return buf.String(), nil
+	return string(data), err
 }
 
 func (k *Keystore) Sign(data []byte) ([]byte, error) {
-	hash := crypto.SHA256
-	h := hash.New()
-	h.Write(data)
-	sum := h.Sum(nil)
-
-	return rsa.SignPKCS1v15(rand.Reader, k.private, hash, sum)
+	method := openssl.SHA256_Method
+	if k.private.KeyType() == openssl.KeyTypeED25519 {
+		method = nil
+	}
+	return k.private.SignPKCS1v15(method, data)
 }
 
 func IsNoKeys(e error) bool {
 	return e == errNoKeys
 }
 
-func loadFromPem(in io.Reader) (*rsa.PrivateKey, error) {
+func IsStaticKey(err error) bool {
+	return err == errStaticKey
+}
+
+func loadFromPem(in io.Reader, keyPassphrase string) (openssl.PrivateKey, error) {
 	data, err := ioutil.ReadAll(in)
+	var key openssl.PrivateKey
 	if err != nil {
 		return nil, err
 	}
-
-	block, _ := pem.Decode(data)
-	if block == nil {
-		return nil, errors.New("failed to decode block")
+	if keyPassphrase != "" {
+		key, err = openssl.LoadPrivateKeyFromPEMWithPassword(data, keyPassphrase)
+	} else {
+		key, err = openssl.LoadPrivateKeyFromPEM(data)
 	}
-
-	log.Debugf("Block type: %s", block.Type)
-
-	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -183,12 +200,47 @@ func loadFromPem(in io.Reader) (*rsa.PrivateKey, error) {
 	return key, nil
 }
 
-func saveToPem(out io.Writer, key *rsa.PrivateKey) error {
-	data := x509.MarshalPKCS1PrivateKey(key)
+func saveToPem(out io.Writer, key openssl.PrivateKey) error {
 
-	err := pem.Encode(out, &pem.Block{
-		Type:  "RSA PRIVATE KEY", // PKCS1
-		Bytes: data,
-	})
+	data, err := key.MarshalPKCS1PrivateKeyPEM()
+	if err != nil {
+		return err
+	}
+
+	_, err = out.Write(data)
+
 	return err
+}
+
+func loadPassphrase(passphrase_file string) (passphrase string, err error) {
+	var fi *os.File
+	var dat []byte
+	if passphrase_file != "" {
+		if passphrase_file == "-" {
+			log.Debugf("Read passphrase from stdin.")
+			fi, err = os.Open("/dev/stdin")
+			if err != nil {
+				log.Errorf("Failed to open stdin: %s", err)
+				return "", err
+			}
+		} else {
+			log.Debugf("Read passphrase from file.")
+			fi, err = os.Open(passphrase_file)
+			if err != nil {
+				log.Errorf("Failed to open passphrase file: %s", err)
+				return "", err
+			}
+		}
+		defer fi.Close()
+		dat, err = ioutil.ReadAll(fi)
+		if err != nil {
+			log.Errorf("Failed to read passphrase: %s", err)
+			return "", err
+		}
+		passphrase = strings.TrimRight(string(dat), "\n")
+	} else {
+		passphrase = ""
+	}
+
+	return passphrase, nil
 }
