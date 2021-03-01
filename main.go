@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 	mrand "math/rand"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -42,12 +43,14 @@ var (
 	inventoryUpdateFrequency int
 	pollFrequency            int
 	backendHost              string
+	serverCertificate        string
 	inventoryItems           string
 	updateFailMsg            string
 	updateFailCount          int
 	currentArtifact          string
 	currentDeviceType        string
 	debugMode                bool
+	singleKeyMode            bool
 	substateReporting        bool
 	startupInterval          int
 
@@ -59,6 +62,12 @@ var (
 	lock sync.Mutex
 )
 
+type FakeMenderClient struct {
+	index int
+	mac   string
+	key   string
+}
+
 type FakeMenderAuthManager struct {
 	idSrc       []byte
 	tenantToken string
@@ -66,29 +75,60 @@ type FakeMenderAuthManager struct {
 	keyStore    *store.Keystore
 }
 
+const (
+	defaultMenderClientCount        = 100
+	defaultMaxWaitSteps             = 1800
+	defaultInventoryUpdateFrequency = 600
+	defaultBackendHost              = "https://localhost"
+	defaultInventoryItems           = "device_type:test,image_id:test,client_version:test,device_group:group1|group2"
+	defaultUpdateFailMsg            = "failed, damn! failed, damn! failed, damn!"
+	defaultUpdateFailCount          = 1
+	defaultCurrentArtifact          = "test"
+	defaultCurrentDeviceType        = "test"
+	defaultPollFrequency            = 600
+	defaultTenantToken              = ""
+	defaultStartupInterval          = 0
+)
+
 func init() {
-	flag.IntVar(&menderClientCount, "count", 100, "amount of fake mender clients to spawn")
-	flag.IntVar(&maxWaitSteps, "wait", 1800, "max. amount of time to wait between update steps: download image, install, reboot, success/failure")
-	flag.IntVar(&inventoryUpdateFrequency, "invfreq", 600, "amount of time to wait between inventory updates")
-	flag.StringVar(&backendHost, "backend", "https://localhost", "entire URI to the backend")
-	flag.StringVar(&inventoryItems, "inventory", "device_type:test,image_id:test,client_version:test", "inventory key:value pairs distinguished with ','")
-	flag.StringVar(&updateFailMsg, "fail", strings.Repeat("failed, damn!", 3), "fail update with specified message")
-	flag.IntVar(&updateFailCount, "failcount", 1, "amount of clients that will fail an update")
+	flag.IntVar(&menderClientCount, "count", defaultMenderClientCount,
+		"amount of fake mender clients to spawn")
+	flag.IntVar(&maxWaitSteps, "wait", defaultMaxWaitSteps,
+		"max. amount of time to wait between update steps: download image, install, reboot, success/failure")
+	flag.IntVar(&inventoryUpdateFrequency, "invfreq", defaultInventoryUpdateFrequency,
+		"amount of time to wait between inventory updates")
+	flag.StringVar(&backendHost, "backend", defaultBackendHost,
+		"entire URI to the backend")
+	flag.StringVar(&serverCertificate, "server_certificate", "",
+		"HTTPS server certificate")
+	flag.StringVar(&inventoryItems, "inventory", defaultInventoryItems,
+		"inventory key:value pairs distinguished with ','; multiple values, separated by pipes, are evenly distributed across the devices")
+	flag.StringVar(&updateFailMsg, "fail", defaultUpdateFailMsg,
+		"fail update with specified message")
+	flag.IntVar(&updateFailCount, "failcount", defaultUpdateFailCount,
+		"amount of clients that will fail an update")
 
-	flag.StringVar(&currentArtifact, "current_artifact", "test", "current installed artifact")
-	flag.StringVar(&currentDeviceType, "current_device", "test", "current device type")
+	flag.StringVar(&currentArtifact, "current_artifact", defaultCurrentArtifact,
+		"current installed artifact")
+	flag.StringVar(&currentDeviceType, "current_device", defaultCurrentDeviceType,
+		"current device type")
 
-	flag.IntVar(&pollFrequency, "pollfreq", 600, "how often to poll the backend")
-	flag.BoolVar(&debugMode, "debug", true, "debug output")
+	flag.IntVar(&pollFrequency, "pollfreq", defaultPollFrequency,
+		"how often to poll the backend")
+	flag.BoolVar(&debugMode, "debug", false,
+		"debug output")
+	flag.BoolVar(&singleKeyMode, "single_key", false,
+		"single key mode: generates a single key and uses sequential mac addresses")
 
-	flag.BoolVar(&substateReporting, "substate", false, "send substate reporting")
-	flag.StringVar(&tenantToken, "tenant", "", "tenant key for account")
+	flag.BoolVar(&substateReporting, "substate", false,
+		"send substate reporting")
+	flag.StringVar(&tenantToken, "tenant", defaultTenantToken,
+		"tenant key for account")
 
-	flag.IntVar(&startupInterval, "startup_interval", 0, "Define the size (seconds) of the uniform interval on which the clients will start")
+	flag.IntVar(&startupInterval, "startup_interval", defaultStartupInterval,
+		"Define the size (seconds) of the uniform interval on which the clients will start")
 
 	mrand.Seed(time.Now().UnixNano())
-
-	updatesPerformed = 0
 }
 
 func main() {
@@ -106,88 +146,120 @@ func main() {
 	updatesLeftToFail = updateFailCount
 
 	if _, err := os.Stat("keys/"); os.IsNotExist(err) {
-		os.Mkdir("keys", 0700)
+		err = os.Mkdir("keys", 0700)
+		if err != nil {
+			panic(err)
+		}
 	}
 
+	clients := make([]*FakeMenderClient, menderClientCount)
+
 	files, _ := filepath.Glob("keys/**")
+	for i, filename := range files {
+		clients[i] = &FakeMenderClient{
+			index: i,
+			mac:   path.Base(filename),
+			key:   filename,
+		}
+	}
+
 	keysMissing := menderClientCount - len(files)
-
-	delta := time.Duration(startupInterval / menderClientCount)
-	if keysMissing <= 0 {
-		for i := 0; i < menderClientCount; i++ {
-			time.Sleep(delta * time.Second)
-			go clientScheduler(files[i])
-		}
-	} else {
-
-		for _, file := range files {
-			time.Sleep(delta * time.Second)
-			go clientScheduler(file)
-		}
-
-		fmt.Printf("%d keys need to be generated..\n", keysMissing)
-
+	if keysMissing > 0 {
+		fmt.Printf("%d keys need to be generated...\n", keysMissing)
 		for keysMissing > 0 {
-			filename, err := generateClientKeys()
-
+			index := menderClientCount - keysMissing
+			mac, filename, err := generateClientKeys(index)
 			if err != nil {
 				log.Fatal("failed to generate crypto keys!")
 			}
-
-			time.Sleep(delta * time.Second)
-			go clientScheduler("keys/" + filename)
+			clients[index] = &FakeMenderClient{
+				index: index,
+				mac:   mac,
+				key:   filename,
+			}
 			keysMissing--
 		}
-
 	}
 
-	files, _ = filepath.Glob("keys/**")
+	delta := time.Duration(startupInterval / menderClientCount)
+	for i := 0; i < menderClientCount; i++ {
+		time.Sleep(delta * time.Second)
+		go clientScheduler(clients[i])
+	}
 
 	// block forever
 	select {}
 }
 
-func generateClientKeys() (string, error) {
+func generateClientKeys(index int) (string, string, error) {
 	buf := make([]byte, 6)
-	rand.Read(buf)
+	if singleKeyMode {
+		buf[0] = 255
+		buf[1] = byte(int64(index>>32) & 255)
+		buf[2] = byte(int64(index>>24) & 255)
+		buf[3] = byte(int64(index>>16) & 255)
+		buf[4] = byte(int64(index>>8) & 255)
+		buf[5] = byte(int64(index) & 255)
+	} else {
+		if _, err := rand.Read(buf); err != nil {
+			panic(err)
+		}
+	}
 
 	fakeMACaddress := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5])
 	log.Debug("created device with fake mac address: ", fakeMACaddress)
 
-	ms := store.NewDirStore("keys/")
-	kstore := store.NewKeystore(ms, fakeMACaddress)
+	if singleKeyMode && index == 0 || !singleKeyMode {
+		ms := store.NewDirStore("keys/")
+		kstore := store.NewKeystore(ms, fakeMACaddress, "", false, "")
 
-	if err := kstore.Generate(); err != nil {
-		return "", err
+		if err := kstore.Generate(); err != nil {
+			return "", "", err
+		}
+
+		if err := kstore.Save(); err != nil {
+			return "", "", err
+		}
+	} else {
+		if err := os.Link("keys/ff:00:00:00:00:00", "keys/"+fakeMACaddress); err != nil {
+			panic(err)
+		}
 	}
 
-	if err := kstore.Save(); err != nil {
-		return "", err
-	}
-
-	return fakeMACaddress, nil
+	return fakeMACaddress, "keys/" + fakeMACaddress, nil
 }
 
-func clientScheduler(storeFile string) {
+func clientScheduler(menderClient *FakeMenderClient) {
 	clientUpdateTicker := time.NewTicker(time.Second * time.Duration(pollFrequency))
 	clientInventoryTicker := time.NewTicker(time.Second * time.Duration(inventoryUpdateFrequency))
 
 	api, err := client.New(client.Config{
-		IsHttps:  true,
-		NoVerify: true,
+		IsHttps:    true,
+		NoVerify:   true,
+		ServerCert: serverCertificate,
 	})
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	storeFile := menderClient.key
 	token := clientAuthenticate(api, storeFile)
 
+	var sendInventory = func() {
+		invItems := parseInventoryItems(menderClient.index)
+		sendInventoryUpdate(api, token, &invItems)
+	}
+
+	// send for inventory and check for updates immediately after authorization
+	sendInventory()
+	checkForNewUpdate(api, token)
+
+	// schedule inventory and check for updates according to the poll/inventory settings
 	for {
 		select {
 		case <-clientInventoryTicker.C:
-			invItems := parseInventoryItems()
-			sendInventoryUpdate(api, token, &invItems)
+			sendInventory()
 
 		case <-clientUpdateTicker.C:
 			checkForNewUpdate(api, token)
@@ -201,8 +273,10 @@ func clientAuthenticate(c *client.ApiClient, storeFile string) client.AuthToken 
 	encdata, _ := json.Marshal(identityData)
 
 	ms := store.NewDirStore(filepath.Dir(storeFile))
-	kstore := store.NewKeystore(ms, macAddress)
-	kstore.Load()
+	kstore := store.NewKeystore(ms, macAddress, "", false, "")
+	if err := kstore.Load(); err != nil {
+		panic(err)
+	}
 
 	authReq := client.NewAuth()
 
@@ -213,7 +287,9 @@ func clientAuthenticate(c *client.ApiClient, storeFile string) client.AuthToken 
 		tenantToken: tenantToken,
 	}
 
-	kstore.Save()
+	if err := kstore.Save(); err != nil {
+		panic(err)
+	}
 
 	for {
 		if authTokenResp, err := authReq.Request(c, backendHost, mgr); err == nil && len(authTokenResp) > 0 {
@@ -357,13 +433,17 @@ func downloadToDevNull(url string) error {
 	return nil
 }
 
-func parseInventoryItems() []client.InventoryAttribute {
+func parseInventoryItems(index int) []client.InventoryAttribute {
 	var invAttrs []client.InventoryAttribute
 	for _, e := range strings.Split(inventoryItems, ",") {
-		pair := strings.Split(e, ":")
-		if pair != nil {
+		pair := strings.SplitN(e, ":", 2)
+		if len(pair) == 2 {
 			key := pair[0]
 			value := pair[1]
+			if strings.Contains(value, "|") {
+				values := strings.Split(value, "|")
+				value = values[index%len(values)]
+			}
 			i := client.InventoryAttribute{Name: key, Value: value}
 			invAttrs = append(invAttrs, i)
 		}

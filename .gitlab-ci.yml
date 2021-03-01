@@ -31,6 +31,8 @@ test:format:
     - git fetch origin 'refs/heads/*:refs/heads/*'
     # Get last remaining tags, if any.
     - git fetch --tags origin
+    # install libssl-dev     
+    - apt-get update && apt-get install -yyq libssl-dev
 
     - mkdir -p /go/src/github.com/mendersoftware
     - cp -r $CI_PROJECT_DIR /go/src/github.com/mendersoftware/mender-stress-test-client
