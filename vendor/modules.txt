@@ -4,8 +4,6 @@ github.com/bmatsuo/lmdb-go/internal/lmdbarch
 github.com/bmatsuo/lmdb-go/lmdb
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 github.com/davecgh/go-spew/spew
-# github.com/konsorten/go-windows-terminal-sequences v1.0.3
-## explicit
 # github.com/magefile/mage v1.11.0
 ## explicit
 github.com/magefile/mage/mg
@@ -23,8 +21,6 @@ github.com/mendersoftware/mender/store
 # github.com/mendersoftware/mender-artifact v0.0.0-20210222082350-3f3eaa8d6da4
 ## explicit
 github.com/mendersoftware/mender-artifact/utils
-# github.com/mendersoftware/mendertesting v0.0.1
-## explicit
 # github.com/mendersoftware/openssl v1.1.0
 github.com/mendersoftware/openssl
 github.com/mendersoftware/openssl/utils
@@ -49,19 +45,11 @@ github.com/stretchr/objx
 # github.com/stretchr/testify v1.7.0
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/mock
-# golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-## explicit
-# golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
-## explicit
 # golang.org/x/sys v0.0.0-20210228012217-479acdf4ea46
 ## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.3.5
-## explicit
-# gopkg.in/yaml.v2 v2.4.0
-## explicit
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 ## explicit
 gopkg.in/yaml.v3
