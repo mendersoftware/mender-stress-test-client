@@ -5,7 +5,7 @@ WORKDIR /go/src/github.com/mendersoftware/mender-stress-test-client
 ADD ./ .
 RUN go build
 
-FROM alpine:3.13.2
+FROM alpine:3.13.3
 COPY --from=builder /go/src/github.com/mendersoftware/mender-stress-test-client/mender-stress-test-client /
 RUN apk add --no-cache ca-certificates && update-ca-certificates
 ENTRYPOINT ["/mender-stress-test-client"]
