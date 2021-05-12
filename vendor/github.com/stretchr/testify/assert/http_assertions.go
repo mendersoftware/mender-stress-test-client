@@ -16,6 +16,7 @@ func httpCode(handler http.HandlerFunc, method, url string, values url.Values) (
 	if err != nil {
 		return -1, err
 	}
+	req.Close = true
 	req.URL.RawQuery = values.Encode()
 	handler(w, req)
 	return w.Code, nil
@@ -117,6 +118,7 @@ func HTTPBody(handler http.HandlerFunc, method, url string, values url.Values) s
 	if err != nil {
 		return ""
 	}
+	req.Close = true
 	handler(w, req)
 	return w.Body.String()
 }

@@ -72,7 +72,7 @@ func makeLogUploadRequest(server string, logs *LogData) (*http.Request, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create log sending HTTP request")
 	}
-
+	hreq.Close = true
 	hreq.Header.Add("Content-Type", "application/json")
 	return hreq, nil
 }

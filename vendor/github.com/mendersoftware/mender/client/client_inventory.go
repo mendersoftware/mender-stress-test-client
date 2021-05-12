@@ -85,7 +85,7 @@ func makeInventorySubmitRequest(method, server string, data interface{}) (*http.
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create inventory HTTP request")
 	}
-
+	hreq.Close = true
 	hreq.Header.Add("Content-Type", "application/json")
 	return hreq, nil
 }

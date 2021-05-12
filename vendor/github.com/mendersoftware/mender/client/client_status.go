@@ -108,7 +108,7 @@ func makeStatusReportRequest(server string, report StatusReport) (*http.Request,
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create status HTTP request")
 	}
-
+	hreq.Close = true
 	hreq.Header.Add("Content-Type", "application/json")
 	return hreq, nil
 }

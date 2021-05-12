@@ -241,7 +241,7 @@ func makeUpdateCheckRequest(server string, current *CurrentUpdate) (*http.Reques
 	if err != nil {
 		return nil, nil, err
 	}
-
+	postReq.Close = true
 	postReq.Header.Add("Content-Type", "application/json")
 
 	if len(vals) != 0 {
@@ -252,6 +252,7 @@ func makeUpdateCheckRequest(server string, current *CurrentUpdate) (*http.Reques
 	if err != nil {
 		return nil, nil, err
 	}
+	getReq.Close = true
 	return postReq, getReq, nil
 }
 
@@ -260,5 +261,6 @@ func makeUpdateFetchRequest(url string) (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
+	req.Close = true
 	return req, nil
 }

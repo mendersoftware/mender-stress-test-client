@@ -123,7 +123,7 @@ func makeAuthRequest(server string, dataSrc AuthDataMessenger) (*http.Request, e
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create authorization HTTP request")
 	}
-
+	hreq.Close = true
 	hreq.Header.Add("Content-Type", "application/json")
 	hreq.Header.Add("Authorization", fmt.Sprintf("Bearer %s", req.Token))
 	hreq.Header.Add("X-MEN-Signature", base64.StdEncoding.EncodeToString(req.Signature))

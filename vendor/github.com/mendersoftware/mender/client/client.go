@@ -238,7 +238,7 @@ func (ar *ApiRequest) Do(req *http.Request) (*http.Response, error) {
 		newReq, _ := http.NewRequest(req.Method, req.URL.String(), body)
 		newReq.Header = req.Header
 		newReq.GetBody = req.GetBody
-
+		newReq.Close = true
 		r, err = ar.tryDo(newReq, server.ServerURL)
 		if err == nil && r.StatusCode < 400 {
 			break
