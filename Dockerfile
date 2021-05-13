@@ -1,5 +1,4 @@
 FROM golang:1.16.4 as builder
-RUN apt-get update -qqy && apt-get install -qqy gcc libssl-dev
 RUN mkdir -p /go/src/github.com/mendersoftware/mender-stress-test-client
 WORKDIR /go/src/github.com/mendersoftware/mender-stress-test-client
 ADD ./ .
