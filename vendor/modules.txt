@@ -1,55 +1,23 @@
-# github.com/bmatsuo/lmdb-go v1.8.0
-## explicit
-github.com/bmatsuo/lmdb-go/internal/lmdbarch
-github.com/bmatsuo/lmdb-go/lmdb
-# github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-github.com/davecgh/go-spew/spew
-# github.com/magefile/mage v1.11.0
-## explicit
+# github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d
+github.com/cpuguy83/go-md2man/v2/md2man
+# github.com/magefile/mage v1.10.0
 github.com/magefile/mage/mg
 github.com/magefile/mage/sh
-# github.com/mattn/go-isatty v0.0.12
-github.com/mattn/go-isatty
-# github.com/mendersoftware/log v0.0.0-20200417111528-65591dc94164
-## explicit
-github.com/mendersoftware/log
-# github.com/mendersoftware/mender v0.0.0-20210216095404-5d46f3997f32
-## explicit
-github.com/mendersoftware/mender/client
-github.com/mendersoftware/mender/datastore
-github.com/mendersoftware/mender/store
-# github.com/mendersoftware/mender-artifact v0.0.0-20210222082350-3f3eaa8d6da4
-## explicit
-github.com/mendersoftware/mender-artifact/utils
-# github.com/mendersoftware/openssl v1.1.0
-github.com/mendersoftware/openssl
-github.com/mendersoftware/openssl/utils
-# github.com/mendersoftware/progressbar v0.0.3
-## explicit
-github.com/mendersoftware/progressbar
-# github.com/mendersoftware/scopestack v0.0.0-20180403081436-c2f55994cadc
-## explicit
-github.com/mendersoftware/scopestack
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
-# github.com/pmezard/go-difflib v1.0.0
-github.com/pmezard/go-difflib/difflib
+# github.com/russross/blackfriday/v2 v2.0.1
+github.com/russross/blackfriday/v2
+# github.com/shurcooL/sanitized_anchor_name v1.0.0
+github.com/shurcooL/sanitized_anchor_name
 # github.com/sirupsen/logrus v1.8.0
 ## explicit
 github.com/sirupsen/logrus
-github.com/sirupsen/logrus/hooks/syslog
-# github.com/stretchr/objx v0.3.0
+# github.com/stretchr/testify v1.3.0
 ## explicit
-github.com/stretchr/objx
-# github.com/stretchr/testify v1.7.0
-github.com/stretchr/testify/assert
-github.com/stretchr/testify/mock
-# golang.org/x/sys v0.0.0-20210228012217-479acdf4ea46
+# github.com/urfave/cli v1.22.5
 ## explicit
-golang.org/x/sys/internal/unsafeheader
+github.com/urfave/cli
+# golang.org/x/sys v0.0.0-20191026070338-33540a1f6037
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
-## explicit
-gopkg.in/yaml.v3

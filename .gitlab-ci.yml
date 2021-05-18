@@ -1,10 +1,12 @@
-image: golang:1.15
 
-before_script:
-  - export DOCKER_REPOSITORY="mendersoftware/mender-stress-test-client"
-  - export DOCKER_TAG=${CI_COMMIT_REF_SLUG:-master}
-  - export SERVICE_IMAGE=$DOCKER_REPOSITORY:$DOCKER_TAG
-  - export COMMIT_TAG="$CI_COMMIT_REF_SLUG"_"$CI_COMMIT_SHA"
+variables:
+  DOCKER_REPOSITORY: mendersoftware/mender-stress-test-client
+  DOCKER_PUBLISH_COMMIT_TAG: ${CI_COMMIT_REF_SLUG:-master}
+  # Setup containers to use docker dind service
+  DOCKER_HOST: "tcp://docker:2376"
+  DOCKER_CERT_PATH: "/certs/client"
+  DOCKER_TLS_VERIFY: 1
+  DOCKER_TLS_CERTDIR: "/certs" # Where docker:dind should generate certs
 
 stages:
   - test
@@ -13,66 +15,22 @@ stages:
 
 include:
   - project: 'Northern.tech/Mender/mendertesting'
+    file: '.gitlab-ci-check-golang-static.yml'
+  - project: 'Northern.tech/Mender/mendertesting'
     file: '.gitlab-ci-check-commits-signoffs.yml'
   - project: 'Northern.tech/Mender/mendertesting'
     file: '.gitlab-ci-check-license.yml'
   - project: 'Northern.tech/Mender/mendertesting'
     file: '.gitlab-ci-github-status-updates.yml'
+  - project: 'Northern.tech/Mender/mendertesting'
+    file: '.gitlab-ci-check-docker-build.yml'
 
-test:format:
-  stage: test
+test:static:
+  image: golang:1.16
+  needs: []
   before_script:
-    # Rename the branch we're on, so that it's not in the way for the
-    # subsequent fetch. It's ok if this fails, it just means we're not on any
-    # branch.
-    - git branch -m temp-branch || true
-    # Git trick: Fetch directly into our local branches instead of remote
-    # branches.
-    - git fetch origin 'refs/heads/*:refs/heads/*'
-    # Get last remaining tags, if any.
-    - git fetch --tags origin
-    # install libssl-dev     
-    - apt-get update && apt-get install -yyq libssl-dev
-
-    - mkdir -p /go/src/github.com/mendersoftware
-    - cp -r $CI_PROJECT_DIR /go/src/github.com/mendersoftware/mender-stress-test-client
-    - cd /go/src/github.com/mendersoftware/mender-stress-test-client
+    - |
+      curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
+           sh -s -- -b $(go env GOPATH)/bin v1.31.0
   script:
-    - go fmt $(go list ./...)
-    - go vet $(go list ./...)
-    - go test -race $(go list ./... )
-
-build:
-  image: docker
-  services:
-    - docker:19.03.5-dind
-  stage: build
-  script:
-    - echo "building mender-stress-test-client for ${SERVICE_IMAGE}"
-    - docker build -t $SERVICE_IMAGE .
-    - docker save $SERVICE_IMAGE > image.tar
-  artifacts:
-    paths:
-      - image.tar
-
-publish:build:
-  image: docker:git
-  stage: publish
-  services:
-    - docker:dind
-  dependencies:
-    - build
-  script:
-    - docker load -i image.tar
-    - docker tag $SERVICE_IMAGE $DOCKER_REPOSITORY:$COMMIT_TAG
-    - docker tag $SERVICE_IMAGE $DOCKER_REPOSITORY:$CI_COMMIT_REF_SLUG
-    # We don't have stable releases nor tags for this repo, so we tag :latest together with :master
-    - docker tag $SERVICE_IMAGE $DOCKER_REPOSITORY:latest
-    - echo -n $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USERNAME --password-stdin
-    - docker push $DOCKER_REPOSITORY:$COMMIT_TAG
-    - docker push $SERVICE_IMAGE
-    - docker push $DOCKER_REPOSITORY:latest
-  only:
-    - master
-  tags:
-    - docker
+    - golangci-lint run -v
