@@ -30,16 +30,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mendersoftware/go-lib-micro/ws"
+	wsshell "github.com/mendersoftware/go-lib-micro/ws/shell"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"github.com/vmihailenco/msgpack/v5"
 
 	"github.com/mendersoftware/mender-stress-test-client/model"
+	"github.com/mendersoftware/mender-stress-test-client/websocket"
 )
 
 const urlAuthRequest = "/api/devices/v1/authentication/auth_requests"
 const urlPutInventory = "/api/devices/v1/inventory/device/attributes"
 const urlDeploymentsNext = "/api/devices/v1/deployments/device/deployments/next"
 const urlDeploymentsStatus = "/api/devices/v1/deployments/device/deployments/{id}/status"
+
+const websocketReconnectionIntervalInSeconds = 60
 
 const (
 	statusDownloading = "downloading"
@@ -56,11 +62,12 @@ const (
 var errUnauthorized = errors.New("unauthorized")
 
 type Client struct {
-	Index        int64
-	MACAddress   string
-	JWTToken     string
-	Config       *model.RunConfig
-	ArtifactName string
+	Index               int64
+	MACAddress          string
+	JWTToken            string
+	Config              *model.RunConfig
+	ArtifactName        string
+	WebsocketConnection *websocket.Connection
 }
 
 type AuthRequest struct {
@@ -181,6 +188,11 @@ auth:
 		goto auth
 	}
 
+	websocketMessages := make(chan *ws.ProtoMsg, 1)
+	if c.Config.Websocket {
+		go c.StartWebsocket(websocketMessages)
+	}
+
 	err = c.SendInventory()
 	if err == errUnauthorized {
 		goto auth
@@ -198,12 +210,49 @@ auth:
 		case <-inventoryTicker.C:
 			err = c.SendInventory()
 			if err == errUnauthorized {
+				if c.Config.Websocket {
+					_ = c.CloseWebsocket()
+				}
 				goto auth
 			}
 		case <-updateTicker.C:
 			err = c.UpdateCheck()
 			if err == errUnauthorized {
+				if c.Config.Websocket {
+					_ = c.CloseWebsocket()
+				}
 				goto auth
+			}
+		case msg := <-websocketMessages:
+			log.Infof("[%s] websocket msg: %v", c.MACAddress, msg)
+			if msg.Header.Proto == ws.ProtoTypeShell &&
+				msg.Header.MsgType == wsshell.MessageTypeSpawnShell {
+				_ = c.WebsocketConnection.WriteMessage(&ws.ProtoMsg{
+					Header: ws.ProtoHdr{
+						Proto:     msg.Header.Proto,
+						MsgType:   msg.Header.MsgType,
+						SessionID: msg.Header.SessionID,
+						Properties: map[string]interface{}{
+							"status": wsshell.ErrorMessage,
+						},
+					},
+					Body: []byte("not supported by mender-stress-test-client"),
+				})
+			} else {
+				b, _ := msgpack.Marshal(ws.Error{
+					Error:        "handshake rejected",
+					MessageProto: ws.ProtoTypeControl,
+					MessageType:  ws.MessageTypeOpen,
+					Close:        true,
+				})
+				_ = c.WebsocketConnection.WriteMessage(&ws.ProtoMsg{
+					Header: ws.ProtoHdr{
+						Proto:     ws.ProtoTypeControl,
+						MsgType:   ws.MessageTypeError,
+						SessionID: msg.Header.SessionID,
+					},
+					Body: b,
+				})
 			}
 		}
 	}
@@ -391,4 +440,41 @@ func (c *Client) Deployment(deploymentID string) error {
 		time.Sleep(c.Config.DeploymentTime)
 	}
 	return nil
+}
+
+func (c *Client) StartWebsocket(websocketMessages chan *ws.ProtoMsg) {
+	interval := websocketReconnectionIntervalInSeconds * time.Second
+	for {
+		err := c.OpenWebsocket()
+		if err != nil {
+			log.Errorf("[%s] %s", c.MACAddress, err)
+			time.Sleep(interval)
+			continue
+		}
+		for {
+			msg, err := c.WebsocketConnection.ReadMessage()
+			if err != nil {
+				_ = c.CloseWebsocket()
+				time.Sleep(interval)
+				break
+			}
+			websocketMessages <- msg
+		}
+	}
+}
+
+func (c *Client) OpenWebsocket() error {
+	conn, err := websocket.NewConnection(c.Config.ServerURL, c.JWTToken)
+	if err != nil {
+		return err
+	}
+	log.Debugf("[%s] %-40s", c.MACAddress, "websocket connected")
+
+	c.WebsocketConnection = conn
+	return nil
+}
+
+func (c *Client) CloseWebsocket() error {
+	log.Debugf("[%s] %-40s", c.MACAddress, "websocket disconnected")
+	return c.WebsocketConnection.Close()
 }
