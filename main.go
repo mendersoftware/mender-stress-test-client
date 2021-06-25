@@ -118,6 +118,10 @@ func doMain(args []string) {
 						Value: 30,
 					},
 					&cli.BoolFlag{
+						Name:  "websocket",
+						Usage: "Enable websocket mode",
+					},
+					&cli.BoolFlag{
 						Name:  "debug",
 						Usage: "Enable debug mode",
 					},
@@ -152,6 +156,7 @@ func cmdRun(args *cli.Context) error {
 		DeploymentTime:      time.Duration(args.Int("deployment-time")) * time.Second,
 		ServerURL:           args.String("server-url"),
 		TenantToken:         args.String("tenant-token"),
+		Websocket:           args.Bool("websocket"),
 	}
 	return run(config)
 }

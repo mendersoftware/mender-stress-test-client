@@ -36,4 +36,5 @@ type RunConfig struct {
 	TenantToken         string
 	PrivateKey          *rsa.PrivateKey
 	PublicKey           []byte
+	Websocket           bool
 }
