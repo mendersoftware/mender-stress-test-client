@@ -1,6 +1,6 @@
 # github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d
 github.com/cpuguy83/go-md2man/v2/md2man
-# github.com/gorilla/websocket v1.4.2
+# github.com/gorilla/websocket v1.5.0
 ## explicit
 github.com/gorilla/websocket
 # github.com/mendersoftware/go-lib-micro v0.0.0-20210622092646-b9a99705385b
