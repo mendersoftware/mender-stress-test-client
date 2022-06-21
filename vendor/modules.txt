@@ -3,7 +3,7 @@ github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/gorilla/websocket v1.5.0
 ## explicit
 github.com/gorilla/websocket
-# github.com/mendersoftware/go-lib-micro v0.0.0-20210622092646-b9a99705385b
+# github.com/mendersoftware/go-lib-micro v0.0.0-20220620185918-c0dd57dbb00b
 ## explicit
 github.com/mendersoftware/go-lib-micro/ws
 github.com/mendersoftware/go-lib-micro/ws/shell
@@ -28,7 +28,7 @@ github.com/vmihailenco/msgpack/v5/msgpcode
 github.com/vmihailenco/tagparser/v2
 github.com/vmihailenco/tagparser/v2/internal
 github.com/vmihailenco/tagparser/v2/internal/parser
-# golang.org/x/sys v0.0.0-20210510120138-977fb7262007
+# golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
