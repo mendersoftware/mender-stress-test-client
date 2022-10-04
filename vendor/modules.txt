@@ -17,7 +17,7 @@ github.com/shurcooL/sanitized_anchor_name
 # github.com/sirupsen/logrus v1.9.0
 ## explicit
 github.com/sirupsen/logrus
-# github.com/urfave/cli v1.22.9
+# github.com/urfave/cli v1.22.10
 ## explicit
 github.com/urfave/cli
 # github.com/vmihailenco/msgpack/v5 v5.3.5
