@@ -7,6 +7,6 @@ require (
 	github.com/mendersoftware/go-lib-micro v0.0.0-20220620185918-c0dd57dbb00b
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
-	github.com/urfave/cli v1.22.10
+	github.com/urfave/cli v1.22.12
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 )
