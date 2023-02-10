@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -55,8 +55,8 @@ const (
 )
 
 const (
-	attributeArtifactName = "artifact_name"
-	attributeDeviceType   = "device_type"
+	attributeRootfsImageVersion = "rootfs-image.version"
+	attributeDeviceType         = "device_type"
 )
 
 var errUnauthorized = errors.New("unauthorized")
@@ -261,7 +261,7 @@ auth:
 func (c *Client) SendInventory() error {
 	attributes := []*model.InventoryAttribute{
 		{
-			Name:  attributeArtifactName,
+			Name:  attributeRootfsImageVersion,
 			Value: c.ArtifactName,
 		},
 		{
