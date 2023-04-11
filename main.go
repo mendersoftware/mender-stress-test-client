@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -15,7 +15,9 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -95,6 +97,11 @@ func doMain(args []string) {
 							"device_group:group1|group2",
 						},
 					},
+					&cli.StringSliceFlag{
+						Name: "identity-attribute",
+						Usage: "Extra identity data attributes in " +
+							"the form key:value",
+					},
 					&cli.IntFlag{
 						Name:  "auth-interval",
 						Usage: "auth interval in seconds",
@@ -157,6 +164,14 @@ func cmdRun(args *cli.Context) error {
 		ServerURL:           args.String("server-url"),
 		TenantToken:         args.String("tenant-token"),
 		Websocket:           args.Bool("websocket"),
+		ExtraIdentity:       make(map[string]string),
+	}
+	for _, attr := range args.StringSlice("identity-attribute") {
+		keyValue := strings.SplitN(attr, ":", 2)
+		if len(keyValue) != 2 {
+			return fmt.Errorf("invalid argument --identity-attribute: %s", attr)
+		}
+		config.ExtraIdentity[keyValue[0]] = keyValue[1]
 	}
 	return run(config)
 }
