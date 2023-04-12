@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: stress-test-client
+  name: stress-test-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stress-test-client
+  template:
+    metadata:
+      labels:
+        app: stress-test-client
+    spec:
+      containers:
+      - image: mendersoftware/mender-stress-test-client:master_43f615f694f0fc222f5231e3c1775d9a21ea59de
+        name: mender-stress-test-client
+        args:
+          - run
+          - --debug
+          - --count=10000
+          - "--tenant-token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZW5kZXIudGVuYW50IjoiNjQxOTlhZTQ5Njk3MTdiNDM3MGI4NjVkIiwiaXNzIjoiTWVuZGVyIiwic3ViIjoiNjQxOTlhZTQ5Njk3MTdiNDM3MGI4NjVkIn0.qxDRfuyONRquuJNqj4mpSxJbjPCUTh8VAuhOhPShPXtD-pUx9j5dTUa2xPME6mISlnvGBWbDSWLa0J4SJn39Z89T1P19mLmBLAWoLx4AUp65Vz-KlBw2JTemv9Vbj39WC1c87rk27YBGQqBAyr5aFs-iEplvC9I9wVjyLknNLtUNPZaRr1IXOnaO9HO5-jeErabMM8ljLjRRTWnOsEGs7vLRrtBcBje9pyehCvhYgSBtFsULRlrG7LSRQery1bc31oLLvjzpJ_M7sG7Q2szF27d-J_PQd2iHklioLx52raX-88hdUAc-SwENYl4SngMRkUztzcZjl18ROENhROfOQ-qMXsK3ojDz4k73vSbOO79T4KJZeVEoOz5UYqk8q9mGChOi3t2_Rz2OjN9EmRK1VT83LgoidtJPL1AnxZd-B4rudtqnT4iEJ4irVDncZeBwQlyvOVS3efX7oxpNk7XZewnhTzd3OX2yWgr37x8iDSJBbTzIVWJGcFJc6uKZHjxW"
+          - "--server-url=https://staging.hosted.mender.io"
+          - "--mac-address-prefix=00"

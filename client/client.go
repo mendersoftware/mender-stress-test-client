@@ -76,10 +76,6 @@ type AuthRequest struct {
 	TenantToken  string `json:"tenant_token"`
 }
 
-type IdentityData struct {
-	MAC string `json:"mac"`
-}
-
 func getMACAddressFromPrefixAndIndex(prefix string, index int64) (string, error) {
 	prefixNum, err := strconv.ParseUint(prefix, 16, 8)
 	if err != nil {
@@ -112,7 +108,10 @@ func NewClient(config *model.RunConfig, index int64) (*Client, error) {
 }
 
 func (c *Client) Authenticate() error {
-	identityData := &IdentityData{MAC: c.MACAddress}
+	identityData := map[string]string{"mac": c.MACAddress}
+	for k, v := range c.Config.ExtraIdentity {
+		identityData[k] = v
+	}
 	identityDataBytes, err := json.Marshal(identityData)
 	if err != nil {
 		return err
