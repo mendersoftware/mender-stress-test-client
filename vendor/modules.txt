@@ -15,7 +15,7 @@ github.com/russross/blackfriday/v2
 # github.com/sirupsen/logrus v1.9.0
 ## explicit
 github.com/sirupsen/logrus
-# github.com/urfave/cli v1.22.12
+# github.com/urfave/cli v1.22.13
 ## explicit
 github.com/urfave/cli
 # github.com/vmihailenco/msgpack/v5 v5.3.5
