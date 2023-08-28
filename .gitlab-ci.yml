@@ -24,6 +24,11 @@ include:
     file: '.gitlab-ci-github-status-updates.yml'
   - project: 'Northern.tech/Mender/mendertesting'
     file: '.gitlab-ci-check-docker-build.yml'
+    ref: pr_278
+
+publish:image:mender:
+  rules:
+    - when: always
 
 test:static:
   image: golang:1.16
