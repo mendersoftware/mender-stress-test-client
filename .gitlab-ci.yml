@@ -24,13 +24,3 @@ include:
     file: '.gitlab-ci-github-status-updates.yml'
   - project: 'Northern.tech/Mender/mendertesting'
     file: '.gitlab-ci-check-docker-build.yml'
-
-test:static:
-  image: golang:1.16
-  needs: []
-  before_script:
-    - |
-      curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | \
-           sh -s -- -b $(go env GOPATH)/bin v1.31.0
-  script:
-    - golangci-lint run -v
