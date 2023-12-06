@@ -53,7 +53,7 @@ type Connection struct {
 	done chan bool
 }
 
-//Websocket connection routine. setup the ping-pong and connection settings
+// Websocket connection routine. setup the ping-pong and connection settings
 func NewConnection(serverURL string, token string) (*Connection, error) {
 	wsServerURL := "ws" + strings.TrimRight(serverURL[4:], "/")
 	parsedURL, err := url.Parse(wsServerURL + defaultDeviceConnectPath)
