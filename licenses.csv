@@ -1,10 +1,11 @@
 github.com/cpuguy83/go-md2man/v2/md2man,MIT
-github.com/gorilla/websocket,BSD-2-Clause
+github.com/gorilla/websocket,BSD-3-Clause
 github.com/pkg/errors,BSD-2-Clause
 github.com/russross/blackfriday/v2,BSD-2-Clause
 github.com/sirupsen/logrus,MIT
 github.com/urfave/cli,MIT
 github.com/vmihailenco/msgpack/v5,BSD-2-Clause
 github.com/vmihailenco/tagparser/v2,BSD-2-Clause
-golang.org/x/sys,BSD-3-Clause
+golang.org/x/net,BSD-3-Clause
+golang.org/x/sys/unix,BSD-3-Clause
 
