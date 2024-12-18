@@ -16,6 +16,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -178,6 +179,7 @@ func (c *Client) Authenticate() error {
 func (c *Client) Run() {
 	inventoryTicker := time.NewTicker(c.Config.InventoryInterval)
 	updateTicker := time.NewTicker(c.Config.UpdateInterval)
+	ctx := context.TODO()
 
 auth:
 	err := c.Authenticate()
@@ -226,7 +228,7 @@ auth:
 			log.Infof("[%s] websocket msg: %v", c.MACAddress, msg)
 			if msg.Header.Proto == ws.ProtoTypeShell &&
 				msg.Header.MsgType == wsshell.MessageTypeSpawnShell {
-				_ = c.WebsocketConnection.WriteMessage(&ws.ProtoMsg{
+				_ = c.WebsocketConnection.WriteMessage(ctx, &ws.ProtoMsg{
 					Header: ws.ProtoHdr{
 						Proto:     msg.Header.Proto,
 						MsgType:   msg.Header.MsgType,
@@ -244,7 +246,7 @@ auth:
 					MessageType:  ws.MessageTypeOpen,
 					Close:        true,
 				})
-				_ = c.WebsocketConnection.WriteMessage(&ws.ProtoMsg{
+				_ = c.WebsocketConnection.WriteMessage(ctx, &ws.ProtoMsg{
 					Header: ws.ProtoHdr{
 						Proto:     ws.ProtoTypeControl,
 						MsgType:   ws.MessageTypeError,
@@ -443,6 +445,7 @@ func (c *Client) Deployment(deploymentID string) error {
 
 func (c *Client) StartWebsocket(websocketMessages chan *ws.ProtoMsg) {
 	interval := websocketReconnectionIntervalInSeconds * time.Second
+	ctx := context.TODO()
 	for {
 		err := c.OpenWebsocket()
 		if err != nil {
@@ -451,7 +454,7 @@ func (c *Client) StartWebsocket(websocketMessages chan *ws.ProtoMsg) {
 			continue
 		}
 		for {
-			msg, err := c.WebsocketConnection.ReadMessage()
+			msg, err := c.WebsocketConnection.ReadMessage(ctx)
 			if err != nil {
 				_ = c.CloseWebsocket()
 				time.Sleep(interval)

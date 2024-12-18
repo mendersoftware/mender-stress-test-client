@@ -15,15 +15,15 @@
 package websocket
 
 import (
+	"context"
 	"crypto/tls"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	wslib "github.com/gorilla/websocket"
+	"github.com/coder/websocket"
 	"github.com/mendersoftware/go-lib-micro/ws"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -42,7 +42,7 @@ const (
 type Connection struct {
 	writeMutex sync.Mutex
 	// the connection handler
-	connection *wslib.Conn
+	connection *websocket.Conn
 	// Time allowed to write a message to the peer.
 	writeWait time.Duration
 	// Maximum message size allowed from peer.
@@ -60,16 +60,22 @@ func NewConnection(serverURL string, token string) (*Connection, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	wslib.DefaultDialer.TLSClientConfig = &tls.Config{
-		InsecureSkipVerify: true,
-	}
-	var wsconn *wslib.Conn
-	dialer := *wslib.DefaultDialer
+	ctx := context.TODO()
+	var wsconn *websocket.Conn
 
 	headers := http.Header{}
 	headers.Set("Authorization", "Bearer "+token)
-	wsconn, resp, err := dialer.Dial(parsedURL.String(), headers)
+	dialer := websocket.DialOptions{
+		HTTPClient: &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			},
+		},
+		HTTPHeader: headers,
+	}
+	wsconn, resp, err := websocket.Dial(ctx, parsedURL.String(), &dialer)
 	if err != nil {
 		return nil, err
 	}
@@ -90,50 +96,31 @@ func NewConnection(serverURL string, token string) (*Connection, error) {
 
 func (c *Connection) pingPongHandler() {
 	// handle the ping-pong connection health check
-	err := c.connection.SetReadDeadline(time.Now().Add(c.defaultPingWait))
-	if err != nil {
-		return
-	}
-
-	pingPeriod := (c.defaultPingWait * 9) / 10
+	/*
+		err := c.connection.SetReadDeadline(time.Now().Add(c.defaultPingWait))
+		if err != nil {
+			return
+		}
+	*/
+	//pingPeriod := (c.defaultPingWait * 9) / 10
+	const pingPeriod = time.Hour
+	rootCtx := context.Background()
 	ticker := time.NewTicker(pingPeriod)
 	defer ticker.Stop()
 
-	c.connection.SetPongHandler(func(string) error {
-		ticker.Reset(pingPeriod)
-		return c.connection.SetReadDeadline(time.Now().Add(c.defaultPingWait))
-	})
-
-	c.connection.SetPingHandler(func(msg string) error {
-		ticker.Reset(pingPeriod)
-		err := c.connection.SetReadDeadline(time.Now().Add(c.defaultPingWait))
-		if err != nil {
-			return err
-		}
-		c.writeMutex.Lock()
-		defer c.writeMutex.Unlock()
-		return c.connection.WriteControl(
-			wslib.PongMessage,
-			[]byte(msg),
-			time.Now().Add(c.writeWait),
-		)
-	})
-
-	running := true
-	for running {
+Loop:
+	for {
 		select {
 		case <-c.done:
-			running = false
-			break
+			break Loop
 		case <-ticker.C:
-			pongWaitString := strconv.Itoa(int(c.defaultPingWait.Seconds()))
-			c.writeMutex.Lock()
-			_ = c.connection.WriteControl(
-				wslib.PingMessage,
-				[]byte(pongWaitString),
-				time.Now().Add(c.defaultPingWait),
-			)
-			c.writeMutex.Unlock()
+			ctx, cancel := context.WithTimeout(rootCtx, time.Second*30)
+			err := c.connection.Ping(ctx)
+			cancel()
+			if err != nil {
+				_ = c.Close()
+				break Loop
+			}
 		}
 	}
 }
@@ -142,19 +129,18 @@ func (c *Connection) GetWriteTimeout() time.Duration {
 	return c.writeWait
 }
 
-func (c *Connection) WriteMessage(m *ws.ProtoMsg) (err error) {
+func (c *Connection) WriteMessage(ctx context.Context, m *ws.ProtoMsg) (err error) {
 	data, err := msgpack.Marshal(m)
 	if err != nil {
 		return err
 	}
 	c.writeMutex.Lock()
 	defer c.writeMutex.Unlock()
-	_ = c.connection.SetWriteDeadline(time.Now().Add(c.writeWait))
-	return c.connection.WriteMessage(wslib.BinaryMessage, data)
+	return c.connection.Write(ctx, websocket.MessageBinary, data)
 }
 
-func (c *Connection) ReadMessage() (*ws.ProtoMsg, error) {
-	_, data, err := c.connection.ReadMessage()
+func (c *Connection) ReadMessage(ctx context.Context) (*ws.ProtoMsg, error) {
+	_, data, err := c.connection.Read(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -172,5 +158,5 @@ func (c *Connection) Close() error {
 	case c.done <- true:
 	default:
 	}
-	return c.connection.Close()
+	return c.connection.CloseNow()
 }
