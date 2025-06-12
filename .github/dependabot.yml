@@ -10,8 +10,6 @@ updates:
       golang-dependencies:
         patterns:
           - "*"
-    reviewers:
-      - "mendersoftware/backend-dependabot-reviewers"
   - commit-message:
       prefix: chore
     directory: /
@@ -22,5 +20,3 @@ updates:
       docker-dependencies:
         patterns:
           - "*"
-    reviewers:
-      - "mendersoftware/backend-dependabot-reviewers"
