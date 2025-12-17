@@ -20,22 +20,23 @@ import (
 )
 
 type RunConfig struct {
-	Count               int64
-	KeyFile             string
-	MACAddressPrefix    string
-	DeviceType          string
-	ArtifactName        string
-	RootfsImageChecksum string
-	InventoryAttributes []string
-	ExtraIdentity       map[string]string
-	StartTime           time.Duration
-	AuthInterval        time.Duration
-	InventoryInterval   time.Duration
-	UpdateInterval      time.Duration
-	DeploymentTime      time.Duration
-	ServerURL           string
-	TenantToken         string
-	PrivateKey          *rsa.PrivateKey
-	PublicKey           []byte
-	Websocket           bool
+	Count                     int64
+	KeyFile                   string
+	MACAddressPrefix          string
+	DeviceType                string
+	ArtifactName              string
+	RootfsImageChecksum       string
+	InventoryAttributes       []string
+	InventoryAttributesRandom []string
+	ExtraIdentity             map[string]string
+	StartTime                 time.Duration
+	AuthInterval              time.Duration
+	InventoryInterval         time.Duration
+	UpdateInterval            time.Duration
+	DeploymentTime            time.Duration
+	ServerURL                 string
+	TenantToken               string
+	PrivateKey                *rsa.PrivateKey
+	PublicKey                 []byte
+	Websocket                 bool
 }
