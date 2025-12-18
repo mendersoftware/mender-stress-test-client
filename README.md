@@ -37,21 +37,24 @@ USAGE:
     run [command options] [arguments...]
 
 OPTIONS:
-   --server-url value             Server's URL (default: "https://localhost")
-   --tenant-token value           Tenant token
-   --count value                  Number of clients to run (default: 100)
-   --start-time value             Start up time in seconds; the clients will spwan uniformly in the given amount of time (default: 10)
-   --key-file value               Path to the key file to use (default: "private.key")
-   --mac-address-prefix value     MAC addresses first byte prefix, in hex format (default: "ff")
-   --device-type value            Device type (default: "test")
-   --rootfs-image-checksum value  Checksum of the rootfs image (default: "4d480539cdb23a4aee6330ff80673a5af92b7793eb1c57c4694532f96383b619")
-   --artifact-name value          Name of the current installed artifact (default: "original")
-   --inventory-attribute value    Inventory attribute, in the form of key:value1|value2 (default: "device_type:test", "image_id:test", "client_version:test", "device_group:group1|group2")
-   --auth-interval value          auth interval in seconds (default: 600)
-   --inventory-interval value     Inventory poll interval in seconds (default: 1800)
-   --update-interval value        Update poll interval in seconds (default: 600)
-   --deployment-time value        Wait time between deployment steps (downloading, installing, rebooting, success) (default: 30)
-   --debug                        Enable debug mode
+   --server-url value                  Server's URL (default: "https://localhost")
+   --tenant-token value                Tenant token
+   --count value                       Number of clients to run (default: 100)
+   --start-time value                  Start up time in seconds; the clients will spwan uniformly in the given amount of time (default: 10)
+   --key-file value                    Path to the key file to use (default: "private.key")
+   --mac-address-prefix value          MAC addresses first byte prefix, in hex format (default: "ff")
+   --device-type value                 Device type (default: "test")
+   --rootfs-image-checksum value       Checksum of the rootfs image (default: "4d480539cdb23a4aee6330ff80673a5af92b7793eb1c57c4694532f96383b619")
+   --artifact-name value               Name of the current installed artifact (default: "original")
+   --inventory-attribute value         Inventory attribute, in the form of key:value1|value2 (default: "device_type:test", "image_id:test", "client_version:test", "device_group:group1|group2")
+   --inventory-attribute-random value  Randomly rotating inventory attribute, in the form of key:value1|value2 (values rotate on each send)
+   --identity-attribute value          Extra identity data attributes in the form key:value
+   --auth-interval value               auth interval in seconds (default: 600)
+   --inventory-interval value          Inventory poll interval in seconds (default: 1800)
+   --update-interval value             Update poll interval in seconds (default: 600)
+   --deployment-time value             Wait time between deployment steps (downloading, installing, rebooting, success) (default: 30)
+   --websocket                         Enable websocket mode
+   --debug                             Enable debug mode
   ```
   
 ## Working with the Client

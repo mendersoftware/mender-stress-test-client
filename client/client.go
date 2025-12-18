@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	mathrand "math/rand"
 	"net/http"
 	"strconv"
 	"strings"
@@ -94,6 +95,7 @@ func getMACAddressFromPrefixAndIndex(prefix string, index int64) (string, error)
 }
 
 func NewClient(config *model.RunConfig, index int64) (*Client, error) {
+	mathrand.Seed(time.Now().UnixNano() + index)
 	macAddress, err := getMACAddressFromPrefixAndIndex(config.MACAddressPrefix, index)
 	if err != nil {
 		return nil, err
@@ -276,6 +278,20 @@ func (c *Client) SendInventory() error {
 		name := parts[0]
 		values := strings.Split(parts[1], "|")
 		value := values[int(c.Index)%len(values)]
+		attributes = append(attributes, &model.InventoryAttribute{
+			Name:  name,
+			Value: value,
+		})
+	}
+
+	for _, attr := range c.Config.InventoryAttributesRandom {
+		parts := strings.SplitN(attr, ":", 2)
+		if len(parts) < 2 {
+			continue
+		}
+		name := parts[0]
+		values := strings.Split(parts[1], "|")
+		value := values[mathrand.Intn(len(values))]
 		attributes = append(attributes, &model.InventoryAttribute{
 			Name:  name,
 			Value: value,
