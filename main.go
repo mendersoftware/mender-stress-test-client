@@ -99,8 +99,9 @@ func doMain(args []string) {
 					},
 					&cli.StringSliceFlag{
 						Name: "inventory-attribute-random",
-						Usage: "Randomly rotating inventory attribute, in the form of " +
-							"key:value1|value2 (values rotate on each send)",
+						Usage: "Randomly rotating inventory attribute, " +
+							"in the form of key:value1|value2 " +
+							"(values rotate on each send)",
 					},
 
 					&cli.StringSliceFlag{
@@ -164,14 +165,16 @@ func cmdRun(args *cli.Context) error {
 		RootfsImageChecksum:       args.String("rootfs-image-checksum"),
 		InventoryAttributes:       args.StringSlice("inventory-attribute"),
 		InventoryAttributesRandom: args.StringSlice("inventory-attribute-random"),
-		AuthInterval:              time.Duration(args.Int("auth-interval")) * time.Second,
-		InventoryInterval:         time.Duration(args.Int("inventory-interval")) * time.Second,
-		UpdateInterval:            time.Duration(args.Int("update-interval")) * time.Second,
-		DeploymentTime:            time.Duration(args.Int("deployment-time")) * time.Second,
-		ServerURL:                 args.String("server-url"),
-		TenantToken:               args.String("tenant-token"),
-		Websocket:                 args.Bool("websocket"),
-		ExtraIdentity:             make(map[string]string),
+
+		AuthInterval:      time.Duration(args.Int("auth-interval")) * time.Second,
+		InventoryInterval: time.Duration(args.Int("inventory-interval")) * time.Second,
+		UpdateInterval:    time.Duration(args.Int("update-interval")) * time.Second,
+		DeploymentTime:    time.Duration(args.Int("deployment-time")) * time.Second,
+
+		ServerURL:     args.String("server-url"),
+		TenantToken:   args.String("tenant-token"),
+		Websocket:     args.Bool("websocket"),
+		ExtraIdentity: make(map[string]string),
 	}
 	for _, attr := range args.StringSlice("identity-attribute") {
 		keyValue := strings.SplitN(attr, ":", 2)

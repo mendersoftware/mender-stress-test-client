@@ -1,13 +1,10 @@
+version: "2"
 run:
   # timeout for analysis, e.g. 30s, 5m, default is 1m
   timeout: 5m
 
   # Skip linting _test.go files
   tests: false
-
-  # Enables skipping of directories:
-  # vendor$, third_party$, testdata$, examples$, Godeps$, builtin$
-  skip-dirs-use-default: true
 
   # Allow multiple parallel golangci-lint instances running.
   # If false (default) - golangci-lint acquires file lock on start.
@@ -16,26 +13,43 @@ run:
 linters:
   enable:
     - bodyclose
-    - deadcode
-    - errcheck
     - gocyclo
-    - gofmt
-    - gosimple
     - govet
-    - ineffassign
     - lll
-    - staticcheck
-    - structcheck
-    - typecheck
-    - unused
-    - varcheck
+  settings:
+    staticcheck:
+      checks:
+        - all
+        # New rules introduced by migration to v2
+        - "-ST1001" # Ignore "Dot imports are discouraged"
+        - "-ST1003" # Ignore "Poorly chosen identifier"
+        - "-ST1005" # Ignore "Incorrectly formatted error string"
+        - "-ST1016" # Ignore "Use consistent method receiver names"
+        - "-ST1023" # Ignore "Redundant type in variable declaration"
+        - "-QF1002" # Ignore "Convert untagged switch to tagged switch"
+        - "-QF1003" # Ignore "Convert if/else-if chain to tagged switch"
+        - "-QF1008" # Ignore "Omit embedded fields from selector expression"
+        - "-QF1011" # Ignore "Omit redundant type from variable declaration"
 
-linters-settings:
-  gocyclo:
-    min-complexity: 20 # default is 30.
+    gocyclo:
+      # default is 30.
+      min-complexity: 20
+    lll:
+      # max line length, lines longer will be reported. Default is 120.
+      line-length: 100
+      # tab width in spaces. Default to 1.
+      tab-width: 8
 
-  lll:
-    # max line length, lines longer will be reported. Default is 120.
-    line-length: 100
-    # tab width in spaces. Default to 1.
-    tab-width: 8
+    unused:
+      field-writes-are-uses: false
+      post-statements-are-reads: true
+      exported-fields-are-used: false
+      parameters-are-used: true
+      local-variables-are-used: true
+      generated-is-used: false
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - legacy

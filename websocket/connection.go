@@ -45,8 +45,6 @@ type Connection struct {
 	connection *wslib.Conn
 	// Time allowed to write a message to the peer.
 	writeWait time.Duration
-	// Maximum message size allowed from peer.
-	maxMessageSize int64
 	// Time allowed to read the next pong message from the peer.
 	defaultPingWait time.Duration
 	// Channel to stop the go routines
@@ -73,12 +71,11 @@ func NewConnection(serverURL string, token string) (*Connection, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	c := &Connection{
 		connection:      wsconn,
 		writeWait:       writeWait,
-		maxMessageSize:  maxMessageSize,
 		defaultPingWait: defaultPingWait,
 		done:            make(chan bool),
 	}
