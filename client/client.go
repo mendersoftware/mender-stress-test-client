@@ -24,7 +24,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	mathrand "math/rand"
 	"net/http"
 	"strconv"
@@ -162,15 +162,15 @@ func (c *Client) Authenticate() error {
 			response.StatusCode, elapsed)
 
 		if response.StatusCode == http.StatusOK {
-			defer response.Body.Close()
-			body, err := ioutil.ReadAll(response.Body)
+			defer response.Body.Close() //nolint:errcheck
+			body, err := io.ReadAll(response.Body)
 			if err != nil {
 				return err
 			}
 			c.JWTToken = string(body)
 			return nil
 		} else {
-			response.Body.Close()
+			_ = response.Body.Close()
 		}
 
 		time.Sleep(c.Config.AuthInterval)
@@ -316,7 +316,7 @@ func (c *Client) SendInventory() error {
 	start := time.Now()
 	response, err := http.DefaultClient.Do(req)
 	if response != nil {
-		response.Body.Close()
+		_ = response.Body.Close()
 	}
 	if err != nil {
 		log.Errorf("[%s] %s", c.MACAddress, err)
@@ -361,7 +361,7 @@ func (c *Client) UpdateCheck() error {
 		return err
 	}
 	elapsed := time.Since(start).Milliseconds()
-	defer response.Body.Close()
+	defer response.Body.Close() //nolint:errcheck
 
 	log.Debugf("[%s] %-40s %d (%6d ms)", c.MACAddress, "update-check",
 		response.StatusCode, elapsed)
@@ -373,7 +373,7 @@ func (c *Client) UpdateCheck() error {
 
 	// received deployment
 	if response.StatusCode == http.StatusOK {
-		body, err := ioutil.ReadAll(response.Body)
+		body, err := io.ReadAll(response.Body)
 		if err != nil {
 			log.Errorf("[%s] %s", c.MACAddress, err)
 			return err
@@ -436,7 +436,7 @@ func (c *Client) Deployment(deploymentID string) error {
 		start := time.Now()
 		response, err := http.DefaultClient.Do(req)
 		if response != nil {
-			response.Body.Close()
+			_ = response.Body.Close()
 		}
 		if err != nil {
 			log.Errorf("[%s] %s", c.MACAddress, err)
