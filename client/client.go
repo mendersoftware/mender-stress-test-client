@@ -69,12 +69,14 @@ type Client struct {
 	Config              *model.RunConfig
 	ArtifactName        string
 	WebsocketConnection *websocket.Connection
+	Tier                *string
 }
 
 type AuthRequest struct {
-	IdentityData string `json:"id_data"`
-	PublicKey    string `json:"pubkey"`
-	TenantToken  string `json:"tenant_token"`
+	IdentityData string  `json:"id_data"`
+	PublicKey    string  `json:"pubkey"`
+	TenantToken  string  `json:"tenant_token"`
+	Tier         *string `json:"tier,omitempty"`
 }
 
 func getMACAddressFromPrefixAndIndex(prefix string, index int64) (string, error) {
@@ -106,6 +108,7 @@ func NewClient(config *model.RunConfig, index int64) (*Client, error) {
 		MACAddress:   macAddress,
 		Config:       config,
 		ArtifactName: config.ArtifactName,
+		Tier:         config.Tier,
 	}, nil
 }
 
@@ -123,6 +126,7 @@ func (c *Client) Authenticate() error {
 		IdentityData: string(identityDataBytes),
 		PublicKey:    string(c.Config.PublicKey),
 		TenantToken:  c.Config.TenantToken,
+		Tier:         c.Tier,
 	}
 
 	body, err := json.Marshal(authRequest)

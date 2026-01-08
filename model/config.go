@@ -39,4 +39,5 @@ type RunConfig struct {
 	PrivateKey                *rsa.PrivateKey
 	PublicKey                 []byte
 	Websocket                 bool
+	Tier                      *string
 }
