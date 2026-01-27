@@ -47,6 +47,10 @@ func doMain(args []string) {
 						Name:  "tenant-token",
 						Usage: "Tenant token",
 					},
+					&cli.StringFlag{
+						Name:  "tier",
+						Usage: "Device tier, e.g.: micro, standard, system",
+					},
 					&cli.IntFlag{
 						Name:  "count",
 						Usage: "Number of clients to run",
@@ -155,6 +159,11 @@ func cmdRun(args *cli.Context) error {
 		log.SetLevel(log.DebugLevel)
 	}
 
+	t := args.String("tier")
+	var p *string
+	if len(t) > 0 {
+		p = &t
+	}
 	config := &model.RunConfig{
 		Count:                     args.Int64("count"),
 		KeyFile:                   args.String("key-file"),
@@ -175,6 +184,7 @@ func cmdRun(args *cli.Context) error {
 		TenantToken:   args.String("tenant-token"),
 		Websocket:     args.Bool("websocket"),
 		ExtraIdentity: make(map[string]string),
+		Tier:          p,
 	}
 	for _, attr := range args.StringSlice("identity-attribute") {
 		keyValue := strings.SplitN(attr, ":", 2)
