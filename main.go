@@ -143,6 +143,14 @@ func doMain(args []string) {
 						Name:  "debug",
 						Usage: "Enable debug mode",
 					},
+					&cli.BoolFlag{
+						Name:  "exit-when-done",
+						Usage: "Exit when no update is found or when a deployment completes successfully",
+					},
+					&cli.StringFlag{
+						Name:  "failure-after",
+						Usage: "Report failure after this phase: downloading, installing, or rebooting",
+					},
 				},
 			},
 		},
@@ -185,6 +193,14 @@ func cmdRun(args *cli.Context) error {
 		Websocket:     args.Bool("websocket"),
 		ExtraIdentity: make(map[string]string),
 		Tier:          p,
+		ExitWhenDone:  args.Bool("exit-when-done"),
+		FailureAfter:  args.String("failure-after"),
+	}
+	if config.FailureAfter != "" {
+		valid := config.FailureAfter == "downloading" || config.FailureAfter == "installing" || config.FailureAfter == "rebooting"
+		if !valid {
+			return fmt.Errorf("invalid --failure-after: %s (must be downloading, installing, or rebooting)", config.FailureAfter)
+		}
 	}
 	for _, attr := range args.StringSlice("identity-attribute") {
 		keyValue := strings.SplitN(attr, ":", 2)
