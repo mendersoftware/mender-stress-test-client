@@ -31,6 +31,10 @@ func run(config *model.RunConfig) error {
 	config.PrivateKey = key
 	config.PublicKey = publicKey
 
+	if config.ExitWhenDone {
+		config.ExitOnDone = make(chan struct{}, 1)
+	}
+
 	for i := int64(0); i < config.Count; i++ {
 		client, err := client.NewClient(config, i)
 		if err != nil {
@@ -41,5 +45,9 @@ func run(config *model.RunConfig) error {
 		time.Sleep(config.StartTime / time.Duration(config.Count))
 	}
 
+	if config.ExitWhenDone {
+		<-config.ExitOnDone
+		return nil
+	}
 	select {}
 }

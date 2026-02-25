@@ -53,6 +53,7 @@ const (
 	statusInstalling  = "installing"
 	statusRebooting   = "rebooting"
 	statusSuccess     = "success"
+	statusFailure     = "failure"
 )
 
 const (
@@ -404,6 +405,18 @@ func (c *Client) UpdateCheck() error {
 			return err
 		}
 	}
+	
+	// no deployment queued
+	if response.StatusCode == http.StatusNoContent {
+		// signal exit when --exit-when-done is set
+		if c.Config.ExitOnDone != nil {
+			select {
+			case c.Config.ExitOnDone <- struct{}{}:
+			default:
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -457,7 +470,47 @@ func (c *Client) Deployment(deploymentID string) error {
 		}
 
 		time.Sleep(c.Config.DeploymentTime)
+
+		// trigger failure if --failure-after is set
+		if c.Config.FailureAfter == status {
+			// report failure to server and stop this deployment
+			body, err := json.Marshal(&model.DeploymentStatus{Status: statusFailure})
+			if err != nil {
+				log.Errorf("[%s] %s", c.MACAddress, err)
+				return err
+			}
+			req, err := http.NewRequest(http.MethodPut, c.Config.ServerURL+statusURL,
+				bytes.NewBuffer(body))
+			if err != nil {
+				log.Errorf("[%s] %s", c.MACAddress, err)
+				return err
+			}
+			req.Header.Add("Content-Type", "application/json")
+			req.Header.Add("Authorization", "Bearer "+c.JWTToken)
+			response, err := http.DefaultClient.Do(req)
+			if response != nil {
+				_ = response.Body.Close()
+			}
+			if err != nil {
+				log.Errorf("[%s] %s", c.MACAddress, err)
+				return err
+			}
+			if response.StatusCode == http.StatusUnauthorized {
+				return errUnauthorized
+			}
+			log.Debugf("[%s] %-40s %d", c.MACAddress, "deployment-status: "+statusFailure, response.StatusCode)
+			break
+		}
 	}
+
+	// signal exit when --exit-when-done is set
+	if c.Config.ExitOnDone != nil {
+		select {
+		case c.Config.ExitOnDone <- struct{}{}:
+		default:
+		}
+	}
+
 	return nil
 }
 

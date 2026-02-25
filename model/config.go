@@ -40,4 +40,7 @@ type RunConfig struct {
 	PublicKey                 []byte
 	Websocket                 bool
 	Tier                      *string
+	ExitWhenDone              bool
+	ExitOnDone                chan struct{}
+	FailureAfter              string
 }
