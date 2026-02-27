@@ -23,7 +23,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
-	"github.com/mendersoftware/mender-stress-test-client/model"
+	"github.com/teamredlabs/mender-stress-test-client/model"
 )
 
 func main() {

@@ -22,7 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/mendersoftware/mender-stress-test-client/model"
+	"github.com/teamredlabs/mender-stress-test-client/model"
 	log "github.com/sirupsen/logrus"
 )
 

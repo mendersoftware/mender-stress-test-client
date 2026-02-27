@@ -37,8 +37,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vmihailenco/msgpack/v5"
 
-	"github.com/mendersoftware/mender-stress-test-client/model"
-	"github.com/mendersoftware/mender-stress-test-client/websocket"
+	"github.com/teamredlabs/mender-stress-test-client/model"
+	"github.com/teamredlabs/mender-stress-test-client/websocket"
 )
 
 const urlAuthRequest = "/api/devices/v1/authentication/auth_requests"

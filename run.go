@@ -17,9 +17,9 @@ package main
 import (
 	"time"
 
-	"github.com/mendersoftware/mender-stress-test-client/client"
-	"github.com/mendersoftware/mender-stress-test-client/key"
-	"github.com/mendersoftware/mender-stress-test-client/model"
+	"github.com/teamredlabs/mender-stress-test-client/client"
+	"github.com/teamredlabs/mender-stress-test-client/key"
+	"github.com/teamredlabs/mender-stress-test-client/model"
 )
 
 func run(config *model.RunConfig) error {

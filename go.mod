@@ -1,4 +1,4 @@
-module github.com/mendersoftware/mender-stress-test-client
+module github.com/teamredlabs/mender-stress-test-client
 
 go 1.15
 
