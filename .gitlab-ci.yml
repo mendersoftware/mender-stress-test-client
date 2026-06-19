@@ -20,8 +20,7 @@ include:
       - qa-common/retry.yml
   - project: 'Northern.tech/Mender/mendertesting'
     file: '.gitlab-ci-check-golang-lint.yml'
-  - project: 'Northern.tech/Mender/mendertesting'
-    file: '.gitlab-ci-check-commits-signoffs.yml'
+  - component: gitlab.com/Northern.tech/Mender/mendertesting/commit-lint@master
   - project: 'Northern.tech/Mender/mendertesting'
     file: '.gitlab-ci-check-license.yml'
   - project: 'Northern.tech/Mender/mendertesting'
