@@ -1,0 +1,68 @@
+// renovate.json5 - Mender dependency update configuration for mender-stress-test-client
+// See Documentation/dependency-updates.md in mender-qa for the process.
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+
+  "extends": [
+    "config:recommended",
+    ":gitSignOff",
+    ":rebaseStalePrs"
+  ],
+
+  // CODEOWNERS assigns backend for everything here.
+  "reviewersFromCodeOwners": true,
+
+  // fix(deps): <desc>, per renovate.json5.sample in mender-qa.
+  "semanticCommits": "enabled",
+  "semanticCommitType": "fix",
+  "semanticCommitScope": "deps",
+
+  // Fallback window for weeks with no merges; the renovate CI job is the primary trigger.
+  "schedule": ["after 10pm on Monday", "before 6am on Tuesday"],
+
+  "prHourlyLimit": 2,
+  "prConcurrentLimit": 5,
+
+  "baseBranchPatterns": ["master"],
+
+  // Security PRs bypass the schedule and automerge when CI is green.
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "schedule": ["at any time"],
+    "automerge": true,
+    "automergeType": "pr",
+    "labels": ["security"]
+  },
+
+  "packageRules": [
+    // config:recommended pulls in :semanticPrefixFixDepsChoreOthers, which forces
+    // semanticCommitType back to "chore" for any dep whose manager does not tag it
+    // with an npm/pip style depType - every docker dep here. Must stay BEFORE the
+    // gitlabci rule: last match wins.
+    {
+      "matchPackageNames": ["*"],
+      "semanticCommitType": "fix"
+    },
+
+    // CI file updates get ci: instead of fix(deps):
+    {
+      "matchManagers": ["gitlabci", "gitlabci-include"],
+      "semanticCommitType": "ci",
+      "semanticCommitScope": ""
+    },
+
+    // Go: one PR for everything, matching Dependabot's golang-dependencies group.
+    {
+      "matchManagers": ["gomod"],
+      "groupName": "golang-dependencies",
+      "groupSlug": "golang-dependencies"
+    },
+
+    // Dependabot grouped the base images too, as docker-dependencies.
+    {
+      "matchManagers": ["dockerfile"],
+      "groupName": "docker-dependencies",
+      "groupSlug": "docker-dependencies"
+    }
+  ]
+}
