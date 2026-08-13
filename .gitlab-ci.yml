@@ -7,6 +7,7 @@ variables:
   DOCKER_TLS_VERIFY: 1
   DOCKER_TLS_CERTDIR: "/certs" # Where docker:dind should generate certs
   GOLANG_VERSION: "1.25"
+  MULTIPLATFORM_BUILD: "true"
 
 stages:
   - test
@@ -30,6 +31,14 @@ include:
     file: '.gitlab-ci-github-status-updates.yml'
   - project: 'Northern.tech/Mender/mendertesting'
     file: '.gitlab-ci-check-docker-build.yml'
+
+build:docker:
+  rules:
+    - when: never
+
+publish:image:
+  rules:
+    - when: never
 
 default:
   tags: !reference [.qa-common-default-runner, tags]
