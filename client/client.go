@@ -70,6 +70,7 @@ type Client struct {
 	ArtifactName        string
 	WebsocketConnection *websocket.Connection
 	Tier                *string
+	rng                 *mathrand.Rand
 }
 
 type AuthRequest struct {
@@ -97,7 +98,6 @@ func getMACAddressFromPrefixAndIndex(prefix string, index int64) (string, error)
 }
 
 func NewClient(config *model.RunConfig, index int64) (*Client, error) {
-	mathrand.Seed(time.Now().UnixNano() + index)
 	macAddress, err := getMACAddressFromPrefixAndIndex(config.MACAddressPrefix, index)
 	if err != nil {
 		return nil, err
@@ -109,6 +109,7 @@ func NewClient(config *model.RunConfig, index int64) (*Client, error) {
 		Config:       config,
 		ArtifactName: config.ArtifactName,
 		Tier:         config.Tier,
+		rng:          mathrand.New(mathrand.NewSource(time.Now().UnixNano() + index)),
 	}, nil
 }
 
@@ -295,7 +296,7 @@ func (c *Client) SendInventory() error {
 		}
 		name := parts[0]
 		values := strings.Split(parts[1], "|")
-		value := values[mathrand.Intn(len(values))]
+		value := values[c.rng.Intn(len(values))]
 		attributes = append(attributes, &model.InventoryAttribute{
 			Name:  name,
 			Value: value,
