@@ -19,7 +19,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"io/ioutil"
 	"os"
 
 	"github.com/mendersoftware/mender-stress-test-client/model"
@@ -37,7 +36,7 @@ func GetPublicPrivateKey(config *model.RunConfig) (*rsa.PrivateKey, []byte, erro
 			return nil, nil, err
 		}
 		data := encodePrivateKeyToPEM(key)
-		err = ioutil.WriteFile(config.KeyFile, data, 0600)
+		err = os.WriteFile(config.KeyFile, data, 0600)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -94,7 +93,7 @@ func encodePrivateKeyToPEM(privateKey *rsa.PrivateKey) []byte {
 }
 
 func readPrivateKeyFromPEM(filename string) (*rsa.PrivateKey, error) {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
