@@ -6,8 +6,10 @@ variables:
   DOCKER_CERT_PATH: "/certs/client"
   DOCKER_TLS_VERIFY: 1
   DOCKER_TLS_CERTDIR: "/certs" # Where docker:dind should generate certs
-  GOLANG_VERSION: "1.25"
+  GOLANG_VERSION: "1.27"
   MULTIPLATFORM_BUILD: "true"
+  IMAGE_GOLANGCI_VERSION:
+    value: "v2.13.2"
 
 stages:
   - test
