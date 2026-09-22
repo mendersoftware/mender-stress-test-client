@@ -52,7 +52,7 @@ func doMain(args []string) {
 						Name:  "tier",
 						Usage: "Device tier, e.g.: micro, standard, system",
 					},
-					&cli.IntFlag{
+					&cli.Int64Flag{
 						Name:  "count",
 						Usage: "Number of clients to run",
 						Value: 100,
