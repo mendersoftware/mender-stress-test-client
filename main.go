@@ -15,13 +15,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v3"
 
 	"github.com/mendersoftware/mender-stress-test-client/model"
 )
@@ -31,8 +32,8 @@ func main() {
 }
 
 func doMain(args []string) {
-	app := &cli.App{
-		Commands: []cli.Command{
+	app := &cli.Command{
+		Commands: []*cli.Command{
 			{
 				Name:   "run",
 				Usage:  "Run the clients",
@@ -94,7 +95,7 @@ func doMain(args []string) {
 						Name: "inventory-attribute",
 						Usage: "Inventory attribute, in the form of " +
 							"key:value1|value2",
-						Value: &cli.StringSlice{
+						Value: []string{
 							"device_type:test",
 							"image_id:test",
 							"client_version:test",
@@ -148,13 +149,13 @@ func doMain(args []string) {
 		},
 	}
 
-	err := app.Run(args)
+	err := app.Run(context.Background(), args)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func cmdRun(args *cli.Context) error {
+func cmdRun(ctx context.Context, args *cli.Command) error {
 	if args.Bool("debug") {
 		log.SetLevel(log.DebugLevel)
 	}
