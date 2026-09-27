@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/gorilla/websocket v1.5.3
-	github.com/mendersoftware/go-lib-micro v0.0.0-20260827124505-f0e30875a77d
+	github.com/mendersoftware/go-lib-micro v0.0.0-20260924120548-79a6e6f20ef9
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.10.2
 	github.com/urfave/cli/v3 v3.13.0
