@@ -2,6 +2,8 @@ github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aN
 github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/mendersoftware/go-lib-micro v0.0.0-20260827124505-f0e30875a77d h1:TLEGADkVI6oTv3JW2FtvNih5eQpiOAj3JSJOwCJWVoc=
 github.com/mendersoftware/go-lib-micro v0.0.0-20260827124505-f0e30875a77d/go.mod h1:CzlSoiOQvmyxmGnSmT7uaIYTT1SQXYD0jjX+nl/X6Ms=
+github.com/mendersoftware/go-lib-micro v0.0.0-20260924120548-79a6e6f20ef9 h1:EUE5LAIuy2lpz3Bt9nTV3i81nlYgOQFWiEXPWZgz/Pw=
+github.com/mendersoftware/go-lib-micro v0.0.0-20260924120548-79a6e6f20ef9/go.mod h1:CzlSoiOQvmyxmGnSmT7uaIYTT1SQXYD0jjX+nl/X6Ms=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/sirupsen/logrus v1.10.2 h1:G2SED73/qrAu6YwbdxOD6peLkCBI3z7L+ykJFTXJBBo=
