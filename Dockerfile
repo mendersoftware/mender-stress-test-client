@@ -1,10 +1,10 @@
-FROM golang:1.27.2-alpine3.24 as builder
+FROM golang:1.27.3-alpine3.24 as builder
 RUN mkdir -p /go/src/github.com/mendersoftware/mender-stress-test-client
 WORKDIR /go/src/github.com/mendersoftware/mender-stress-test-client
 ADD ./ .
 RUN go build
 
-FROM alpine:3.24.2
+FROM alpine:3.24.3
 COPY --from=builder /go/src/github.com/mendersoftware/mender-stress-test-client/mender-stress-test-client /
 RUN apk add --no-cache ca-certificates libc6-compat && update-ca-certificates
 ENTRYPOINT ["/mender-stress-test-client"]
