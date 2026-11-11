@@ -1,4 +1,4 @@
-FROM golang:1.27.3-alpine3.24 as builder
+FROM golang:1.27.4-alpine3.24 as builder
 RUN mkdir -p /go/src/github.com/mendersoftware/mender-stress-test-client
 WORKDIR /go/src/github.com/mendersoftware/mender-stress-test-client
 ADD ./ .
